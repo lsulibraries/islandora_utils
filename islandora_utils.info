@@ -1,0 +1,6 @@
+name = Islandora Reindex collection
+dependencies[] = islandora
+description = Trigger gsearch to reindex a collection.
+package = Islandora
+version = 7.x
+core = 7.x
