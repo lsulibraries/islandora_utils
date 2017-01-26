@@ -25,6 +25,18 @@ function islandora_utils_drush_command() {
         ),
       ),
     ),
+    'islandora-utils-index-list' => array(
+      'drupal dependencies' => array(
+        'islandora',
+        'islandora_basic_collection',
+      ),
+      'options' => array(
+        'list' => array(
+          'description' => dt('list of comma-separated PIDs to reindex.'),
+          'required' => TRUE,
+        ),
+      ),
+    )
   );
 }
 
@@ -34,20 +46,31 @@ function islandora_utils_drush_command() {
 function drush_islandora_utils_reindex_collection() {
     require_once('includes/gsearch.inc');
     $pid = drush_get_option('collection');
-    $members = get_collection_members($pid);
+    $pids = get_collection_members($pid);
+    process_pid_list($pids);
+}
+
+function drush_islandora_utils_index_list(){
+    $pids = explode(',', drush_get_option('list'));
+    process_pid_list($pids);
+}
+
+function process_pid_list($list){
+    require_once('includes/gsearch.inc');
+
     $last = 0;
     $failures = array();
 
-    foreach($members as $member){
+    foreach($list as $pid){
         timer_start('gsearch');
 
-        if(!speak_to_gsearch($member, 'index')){
-            $failures[] = $member;
+        if(!speak_to_gsearch($pid, 'index')){
+            $failures[] = $pid;
         }
 
         $timer   = timer_stop('gsearch');
         $elapsed = $timer['time'] - $last;
-        drush_log("Reindexed $member.       ". format_times($timer, $elapsed), 'success');
+        drush_log("Reindexed $pid.       ". format_times($timer, $elapsed), 'success');
 
         $last    = $timer['time'];
     }
