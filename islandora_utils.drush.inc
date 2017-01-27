@@ -113,7 +113,9 @@ function drush_islandora_utils_index_list(){
     $list   = drush_get_option('list');
     if($infile && $list){
         throw new Exception("'infile' and 'list' are mutually exclusive options.");
-    }elseif (!$list) {
+    }elseif (!$list && !$infile) {
+        throw new Exception ('One of the options [infile,list] is required.');
+    }elseif(!$list){
         $list = file_get_contents($infile);
     }
     $pids = explode(',', $list);
