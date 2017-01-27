@@ -25,7 +25,7 @@ function islandora_utils_drush_command() {
           'required' => TRUE,
         ),
         'outfile' => array(
-          'description' => dt('File to write list.'),
+          'description' => dt('File to write result list (relative to site root).'),
           'required'    => FALSE,
           )
       ),
@@ -37,15 +37,15 @@ function islandora_utils_drush_command() {
       ),
       'options' => array(
         'list' => array(
-          'description' => dt('list of comma-separated PIDs to reindex.'),
+          'description' => dt('String of comma-separated PIDs to reindex.'),
           'required' => FALSE,
         ),
         'outfile' => array(
-          'description' => dt('File to write list.'),
+          'description' => dt('File to write result list (relative to site root).'),
           'required'    => FALSE,
         ),
         'infile'  => array(
-          'description' => dt('File containing a comma-separated list of pids'),
+          'description' => dt('File containing a comma-separated string of pids'),
           'required'    => FALSE
         )
       ),
@@ -57,11 +57,11 @@ function islandora_utils_drush_command() {
       ),
       'options' => array(
         'collection' => array(
-          'description' => dt('collection pid'),
+          'description' => dt('Collection PID.'),
           'required' => TRUE,
           ),
         'outfile' => array(
-          'description' => dt('File to write list.'),
+          'description' => dt('File to write result list (relative to site root).'),
           'required'    => FALSE,
           )
         ),
@@ -73,7 +73,7 @@ function islandora_utils_drush_command() {
       ),
       'options' => array(
         'collection' => array(
-          'description' => dt('collection pid'),
+          'description' => dt('Collection PID.'),
           'required' => TRUE,
           ),
         'dsid' => array(
@@ -81,7 +81,7 @@ function islandora_utils_drush_command() {
           'required' => TRUE,
           ),
         'outfile' => array(
-          'description' => dt('File to write list.'),
+          'description' => dt('File to write result list (relative to site root).'),
           'required'    => FALSE,
           ),
       ),
