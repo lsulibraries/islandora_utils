@@ -36,8 +36,39 @@ function islandora_utils_drush_command() {
           'required' => TRUE,
         ),
       ),
+    ),
+    'islandora-utils-get-pids-for-collection' => array(
+      'drupal dependencies' => array(
+        'islandora',
+        'islandora_basic_collection',
+      ),
+      'options' => array(
+        'collection' => array(
+          'description' => dt('collection pid'),
+          'required' => TRUE,
+          ),
+        'outfile' => array(
+          'description' => dt('File to write list.'),
+          'required'    => FALSE,
+          )
+        ),
     )
   );
+}
+
+
+function drush_islandora_utils_get_pids_for_collection(){
+    require_once('includes/gsearch.inc');
+    $pid = drush_get_option('collection');
+    $pids = get_collection_members($pid);
+    $outString = csv_format_pid_list($pids);
+    if(drush_get_option('outfile')){
+        print('writing file'.drush_get_option('outfile'));
+        file_put_contents(drush_get_option('outfile'), $outString);
+    }else{
+//        drush_log($outString, 'success');
+        print "\n".$outString."\n\n";
+    }
 }
 
 /**
@@ -75,6 +106,13 @@ function process_pid_list($list){
         $last    = $timer['time'];
     }
     if(!empty($failures)){
-        drush_log("The followingt pids failed reindexing: ".implode(',',$failures), 'warning');
+        drush_log("The followingt pids failed reindexing: ".  csv_format_pid_list($failures), 'warning');
     }
+}
+
+function csv_format_pid_list($pids){
+    if(!is_array($pids)){
+        throw new Exception('Input param is not an array.');
+    }
+    return implode(',',$pids);
 }
