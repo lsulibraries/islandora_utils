@@ -1,8 +1,21 @@
 <?php
-
-/* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Implements hook_islandora_object_ingested().
+ *
+ * On object ingestion register the collection eligible for collection search.
  */
+function islandora_utils_islandora_object_ingested(AbstractObject $object) {
 
+  module_load_include('inc', 'islandora', 'includes/derivatives');
+
+  $object_models = $object->models;
+  $is_collection = in_array('islandora:collectionCModel', $object_models);
+  $enforcing = variable_get('islandora_namespace_restriction_enforced');
+  if($is_collection && $enforcing){
+      $pid = explode(':',$object->id);
+      $namespace = $pid[0];
+
+      variable_set('islandora_pids_allowed', variable_get('islandora_pids_allowed').' '.$namespace.':');
+      variable_set('islandora_solr_namespace_restriction', variable_get('islandora_solr_namespace_restriction').' '.$namespace);
+  }
+}
