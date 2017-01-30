@@ -49,3 +49,124 @@ function output_result($pids){
         print("\n".$pidstr."\n\n");
     }
 }
+
+/**
+ * Ingest an Islandora collection object.
+ *
+ * Modified from https://github.com/mjordan/islandora_migrate_cdm_collections
+ *
+ *
+ * @param string $namespace
+ *   The Fedora namespace to use for this object.
+ * @param string $parent
+ *   The PID of the parent collection the newly created collection.
+ */
+function islandora_migrate_cdm_collections_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root') {
+
+  try {
+    $tuque = new IslandoraTuque();
+    $repository = $tuque->repository;
+    $collection_object = $repository->constructObject($namespace);
+    $collection_object->label = $title;
+
+    $collection_policy_xml = <<<EOCP
+<collection_policy xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="$title" xsi:schemaLocation="http://www.islandora.ca http://syn.lib.umanitoba.ca/collection_policy.xsd">
+<content_models/>
+<search_terms/>
+<staging_area/>
+<relationship>isMemberOfCollection</relationship>
+</collection_policy>
+EOCP;
+
+    // Add the COLLECTION_POLICY ds.
+    $coll_policy_datastream = $collection_object->constructDatastream('COLLECTION_POLICY', 'M');
+    $coll_policy_datastream->label = 'Collection policy';
+    $coll_policy_datastream->mimetype = 'text/xml';
+    $coll_policy_datastream->setContentFromString($collection_policy_xml);
+    $collection_object->ingestDatastream($coll_policy_datastream);
+
+    // Add the MODS ds.
+    $collection_description = $descript;
+
+    $mods_xml = <<<EODC
+<?xml version="1.0"?>
+<mods xmlns="http://www.loc.gov/mods/v3" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <titleInfo>
+    <title>$title</title>
+  </titleInfo>
+  <name type="personal">
+    <namePart/>
+    <role>
+      <roleTerm authority="marcrelator" type="text"/>
+    </role>
+  </name>
+  <typeOfResource collection="yes"/>
+  <genre authority="lctgm"/>
+  <originInfo>
+    <dateCreated/>
+  </originInfo>
+  <language>
+    <languageTerm authority="iso639-2b" type="code">eng</languageTerm>
+  </language>
+  <abstract>$collection_description</abstract>
+  <identifier type="local"/>
+  <physicalDescription>
+    <form authority="marcform"/>
+    <extent/>
+  </physicalDescription>
+  <note/>
+  <accessCondition/>
+  <subject>
+    <topic/>
+    <geographic/>
+    <temporal/>
+    <hierarchicalGeographic>
+      <continent/>
+      <country/>
+      <province/>
+      <region/>
+      <county/>
+      <city/>
+      <citySection/>
+    </hierarchicalGeographic>
+    <cartographics>
+      <coordinates/>
+    </cartographics>
+  </subject>
+</mods>
+EODC;
+
+    $mods_datastream = $collection_object->constructDatastream('MODS', 'M');
+    $mods_datastream->label = 'MODS Record';
+    $mods_datastream->mimetype = 'application/xml';
+    $mods_datastream->setContentFromString($mods_xml);
+    $collection_object->ingestDatastream($mods_datastream);
+
+
+    // Handle TN.
+    $path_to_thumbnail = drupal_get_path('module', 'islandora_basic_collection').'/images/folder.png';
+    $tn_datastream = $collection_object->constructDatastream('TN', 'M');
+    $tn_mime_detector = new MimeDetect();
+    $tn_datastream->mimetype = $tn_mime_detector->getMimetype($path_to_thumbnail);
+    $tn_datastream->label = 'Thumbnail';
+    $tn_datastream->setContentFromFile($path_to_thumbnail);
+    $collection_object->ingestDatastream($tn_datastream);
+
+    // Add relationships.
+    $rels = $collection_object->relationships;
+    $rels->add('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection', $parent, FALSE);
+    $rels->add('info:fedora/fedora-system:def/model#', 'hasModel', 'islandora:collectionCModel', FALSE);
+
+    $repository->ingestObject($collection_object);
+    drupal_set_message(t('Ingested Islandora collection object %t (PID %p).',
+      array('%t' => $collection_object->label, '%p' => $collection_object->id)));
+    watchdog('islandora_migrate_cdm_collections', 'Ingested Islandora collection object %t (PID %p).',
+      array('%t' => $collection_object->label, '%p' => $collection_object->id), WATCHDOG_INFO);
+  }
+  catch (Exception $e) {
+    drupal_set_message(t('Error ingesting Islandora collection object %t (PID %p).',
+      array('%t' => $collection_object->title, '%p' => $collection_object->id)), 'error');
+    watchdog('islandora_migrate_cdm_collections', 'Error ingesting Islandora collection object %t (PID %p).',
+      array('%t' => $title, '%p' => $collection_object->id), WATCHDOG_ERROR);
+  }
+}

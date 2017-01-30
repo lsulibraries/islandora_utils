@@ -86,6 +86,33 @@ function islandora_utils_drush_command() {
           ),
       ),
     );
+    $items['islandora-utils-create-collection'] = array(
+      'description' => dt('Create a collection container.'),
+      'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
+      'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+      'drupal dependencies' => array(
+        'islandora',
+        'islandora_basic_collection',
+      ),
+      'options' => array(
+        'namespace' => array(
+          'description' => dt('PID to assign to the collection.'),
+          'required' => TRUE,
+        ),
+        'parent' => array(
+          'description' => dt('Collection to which the new collection will belong; defaults to islandora:root.'),
+          'required'    => FALSE,
+          ),
+        'title' => array(
+          'description' => dt('Collection title'),
+          'required' => TRUE,
+        ),
+        'description' => array(
+          dt("Description of the collection."),
+          'required' => TRUE,
+        )
+      ),
+    );
   return $items;
 }
 
@@ -143,5 +170,19 @@ function drush_islandora_utils_get_objects_missing_dsid(){
         drush_log(sprintf("%d items missing the %s datastream.\n",count($miss), $dsid).  output_result($miss)."\n", 'warning');
     }else{
         drush_log("All objects in $coll have datastream $dsid", "success");
+    }
+}
+
+function drush_islandora_utils_create_collection(){
+    require_once('includes/util.inc');
+    $namespace = drush_get_option('namespace');
+    $parent    = drush_get_option('parent');
+    $title     = drush_get_option('title');
+    $descript  = drush_get_option('description');
+
+    if(islandora_object_load($namespace)){
+        drush_log("$namespace has already been ingested.\n", "success");
+    }else{
+        islandora_migrate_cdm_collections_ingest_collection($title, $descript, $namespace, $parent);
     }
 }
