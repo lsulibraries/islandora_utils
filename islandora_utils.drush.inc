@@ -183,6 +183,6 @@ function drush_islandora_utils_create_collection(){
     if(islandora_object_load($namespace)){
         drush_log("$namespace has already been ingested.\n", "success");
     }else{
-        islandora_migrate_cdm_collections_ingest_collection($title, $descript, $namespace, $parent);
+        islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
     }
 }
