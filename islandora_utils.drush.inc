@@ -9,180 +9,230 @@
  * Implements hook_drush_command().
  */
 function islandora_utils_drush_command() {
-    $items = array();
-  
-    $items['islandora-utils-reindex-collection'] = array(
-      'description' => dt('Update index via gsearch.'),
-      'examples' => array('drush islandora-reindex-collection-reindex-collection --collection=my:collection'),
-      'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
-      'drupal dependencies' => array(
-        'islandora',
-        'islandora_basic_collection',
+  $items = array();
+
+  $items['islandora-utils-reindex-collection'] = array(
+    'description' => dt('Update index via gsearch.'),
+    'examples' => array('drush islandora-reindex-collection-reindex-collection --collection=my:collection'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'collection' => array(
+        'description' => dt('PID of the collection to reindex.'),
+        'required' => TRUE,
       ),
-      'options' => array(
-        'collection' => array(
-          'description' => dt('PID of the collection to reindex.'),
-          'required' => TRUE,
-        ),
-        'outfile' => array(
-          'description' => dt('File to write result list (relative to site root).'),
-          'required'    => FALSE,
-          )
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
+      )
+    ),
+  );
+  $items['islandora-utils-index-list'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'list' => array(
+        'description' => dt('String of comma-separated PIDs to reindex.'),
+        'required' => FALSE,
       ),
-    );
-    $items['islandora-utils-index-list'] = array(
-      'drupal dependencies' => array(
-        'islandora',
-        'islandora_basic_collection',
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
       ),
-      'options' => array(
-        'list' => array(
-          'description' => dt('String of comma-separated PIDs to reindex.'),
-          'required' => FALSE,
-        ),
-        'outfile' => array(
-          'description' => dt('File to write result list (relative to site root).'),
-          'required'    => FALSE,
-        ),
-        'infile'  => array(
-          'description' => dt('File containing a comma-separated string of pids'),
-          'required'    => FALSE
-        )
+      'infile' => array(
+        'description' => dt('File containing a comma-separated string of pids'),
+        'required' => FALSE,
       ),
-    );
-    $items['islandora-utils-get-pids-for-collection'] = array(
-      'drupal dependencies' => array(
-        'islandora',
-        'islandora_basic_collection',
+    ),
+  );
+  $items['islandora-utils-get-cdm-pointers-for-collection'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'collection' => array(
+        'description' => dt('Collection PID.'),
+        'required' => TRUE,
       ),
-      'options' => array(
-        'collection' => array(
-          'description' => dt('Collection PID.'),
-          'required' => TRUE,
-          ),
-        'outfile' => array(
-          'description' => dt('File to write result list (relative to site root).'),
-          'required'    => FALSE,
-          )
-        ),
-    );
-    $items['islandora-utils-get-objects-missing-dsid'] = array(
-      'drupal dependencies' => array(
-        'islandora',
-        'islandora_basic_collection',
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
       ),
-      'options' => array(
-        'collection' => array(
-          'description' => dt('Collection PID.'),
-          'required' => TRUE,
-          ),
-        'dsid' => array(
-          'description' => dt('The datastream to look for (case-sensitive).'),
-          'required' => TRUE,
-          ),
-        'outfile' => array(
-          'description' => dt('File to write result list (relative to site root).'),
-          'required'    => FALSE,
-          ),
+      'infile' => array(
+        'description' => dt('File containing a comma-separated string of CDM pointers'),
+        'required' => FALSE,
       ),
-    );
-    $items['islandora-utils-create-collection'] = array(
-      'description' => dt('Create a collection container.'),
-      'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
-      'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
-      'drupal dependencies' => array(
-        'islandora',
-        'islandora_basic_collection',
+    ),
+  );
+  $items['islandora-utils-get-pids-for-collection'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'collection' => array(
+        'description' => dt('Collection PID.'),
+        'required' => TRUE,
       ),
-      'options' => array(
-        'namespace' => array(
-          'description' => dt('PID to assign to the collection.'),
-          'required' => TRUE,
-        ),
-        'parent' => array(
-          'description' => dt('Collection to which the new collection will belong; defaults to islandora:root.'),
-          'required'    => FALSE,
-          ),
-        'title' => array(
-          'description' => dt('Collection title'),
-          'required' => TRUE,
-        ),
-        'description' => array(
-          dt("Description of the collection."),
-          'required' => TRUE,
-        )
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
+      )
+    ),
+  );
+  $items['islandora-utils-get-objects-missing-dsid'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'collection' => array(
+        'description' => dt('Collection PID.'),
+        'required' => TRUE,
       ),
-    );
+      'dsid' => array(
+        'description' => dt('The datastream to look for (case-sensitive).'),
+        'required' => TRUE,
+      ),
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
+      ),
+    ),
+  );
+  $items['islandora-utils-create-collection'] = array(
+    'description' => dt('Create a collection container.'),
+    'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'namespace' => array(
+        'description' => dt('PID to assign to the collection.'),
+        'required' => TRUE,
+      ),
+      'parent' => array(
+        'description' => dt('Collection to which the new collection will belong; defaults to islandora:root.'),
+        'required' => FALSE,
+      ),
+      'title' => array(
+        'description' => dt('Collection title'),
+        'required' => TRUE,
+      ),
+      'description' => array(
+        dt("Description of the collection."),
+        'required' => TRUE,
+      )
+    ),
+  );
   return $items;
 }
 
+function drush_islandora_utils_get_pids_for_collection() {
+  require_once('includes/util.inc');
+  $pid = drush_get_option('collection');
+  $pids = get_collection_members($pid);
+  output_result($pids);
+}
 
-function drush_islandora_utils_get_pids_for_collection(){
-    require_once('includes/util.inc');
-    $pid = drush_get_option('collection');
-    $pids = get_collection_members($pid);
-    output_result($pids);
+/**
+ * 
+ */
+function drush_islandora_utils_get_cdm_pointers_for_collection() {
+  require_once 'includes/util.inc';
+  $pid  = drush_get_option('collection');
+  $ptrs = drush_get_option('infile', FALSE) ? explode(',', file_get_contents(drush_get_option('infile'))) : FALSE;
+  $pids = get_collection_members($pid);
+  $map  = array();
+
+  foreach ($pids as $pid) {
+    $obj   = islandora_object_load($pid);
+    $mods  = $obj->getDatastream('MODS')->content;
+    $xml   = simplexml_load_string($mods);
+    $ptr   = $xml->extension->CONTENTdmData->pointer;
+    if ($ptrs) {
+      if (in_array($ptr, $ptrs)) {
+        $map[] = $pid;
+      }
+    }
+    else {
+      $map[] = sprintf("%s => %s", $ptr, $pid);
+    }
+  }
+  output_result($map);
 }
 
 /**
  * Drush command for islandora-basic-collection-generate-thumbs-from-children.
  */
 function drush_islandora_utils_reindex_collection() {
-    require_once('includes/util.inc');
-    $pid = drush_get_option('collection');
-    $pids = get_collection_members($pid);
-    index_pids($pids);
+  require_once('includes/util.inc');
+  $pid = drush_get_option('collection');
+  $pids = get_collection_members($pid);
+  index_pids($pids);
 }
 
-function drush_islandora_utils_index_list(){
-    require_once('includes/util.inc');
-    $infile = drush_get_option('infile');
-    $list   = drush_get_option('list');
-    if($infile && $list){
-        throw new Exception("'infile' and 'list' are mutually exclusive options.");
-    }elseif (!$list && !$infile) {
-        throw new Exception ('One of the options [infile,list] is required.');
-    }elseif(!$list){
-        $list = file_get_contents($infile);
-    }
-    $pids = explode(',', $list);
-    index_pids($pids);
+function drush_islandora_utils_index_list() {
+  require_once('includes/util.inc');
+  $infile = drush_get_option('infile');
+  $list = drush_get_option('list');
+  if ($infile && $list) {
+    throw new Exception("'infile' and 'list' are mutually exclusive options.");
+  }
+  elseif (!$list && !$infile) {
+    throw new Exception('One of the options [infile,list] is required.');
+  }
+  elseif (!$list) {
+    $list = file_get_contents($infile);
+  }
+  $pids = explode(',', $list);
+  index_pids($pids);
 }
 
-function drush_islandora_utils_get_objects_missing_dsid(){
-    require_once('includes/util.inc');
-    $coll  = drush_get_option('collection');
-    $dsid  = drush_get_option('dsid');
-    $pids  = get_collection_members($coll);
-    $miss  = array();
+function drush_islandora_utils_get_objects_missing_dsid() {
+  require_once('includes/util.inc');
+  $coll = drush_get_option('collection');
+  $dsid = drush_get_option('dsid');
+  $pids = get_collection_members($coll);
+  $miss = array();
 
-    foreach($pids as $pid){
-        $object = islandora_object_load($pid);
+  foreach ($pids as $pid) {
+    $object = islandora_object_load($pid);
 
-        if(!$object->getDatastream($dsid)){
-            $miss[] = $pid;
-            drush_log("Missing dsid $dsid for $pid", "warning");
-            continue;
-        }
-        drush_log("$pid ok.", "success");
+    if (!$object->getDatastream($dsid)) {
+      $miss[] = $pid;
+      drush_log("Missing dsid $dsid for $pid", "warning");
+      continue;
     }
-    if(!empty($miss)){
-        drush_log(sprintf("%d items missing the %s datastream.\n",count($miss), $dsid).  output_result($miss)."\n", 'warning');
-    }else{
-        drush_log("All objects in $coll have datastream $dsid", "success");
-    }
+    drush_log("$pid ok.", "success");
+  }
+  if (!empty($miss)) {
+    drush_log(sprintf("%d items missing the %s datastream.\n", count($miss), $dsid) . output_result($miss) . "\n", 'warning');
+  }
+  else {
+    drush_log("All objects in $coll have datastream $dsid", "success");
+  }
 }
 
-function drush_islandora_utils_create_collection(){
-    require_once('includes/util.inc');
-    $namespace = drush_get_option('namespace');
-    $parent    = drush_get_option('parent');
-    $title     = drush_get_option('title');
-    $descript  = drush_get_option('description');
+function drush_islandora_utils_create_collection() {
+  require_once('includes/util.inc');
+  $namespace = drush_get_option('namespace');
+  $parent = drush_get_option('parent');
+  $title = drush_get_option('title');
+  $descript = drush_get_option('description');
 
-    if(islandora_object_load($namespace)){
-        drush_log("$namespace has already been ingested.\n", "success");
-    }else{
-        islandora_migrate_cdm_collections_ingest_collection($title, $descript, $namespace, $parent);
-    }
+  if (islandora_object_load($namespace)) {
+    drush_log("$namespace has already been ingested.\n", "success");
+  }
+  else {
+    islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
+  }
 }
