@@ -171,7 +171,7 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
     }
   }
   output_result($map);
-  printf("\nLooking for %d pointers, found %d\n", count($ptrs), count($hits));
+  printf("\nLooking for %d pointers, found %d\nNot found:\n", count($ptrs), count($hits), implode(',', array_diff($ptrs, $hits)));
 }
 
 /**
