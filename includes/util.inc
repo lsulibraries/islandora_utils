@@ -61,7 +61,7 @@ function output_result($pids){
  * @param string $parent
  *   The PID of the parent collection the newly created collection.
  */
-function islandora_migrate_cdm_collections_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root') {
+function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root') {
 
   try {
     $tuque = new IslandoraTuque();
