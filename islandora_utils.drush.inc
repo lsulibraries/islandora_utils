@@ -150,7 +150,7 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
   require_once 'includes/util.inc';
   $pid  = drush_get_option('collection');
   $ptrs = drush_get_option('infile', FALSE) ? explode(',', file_get_contents(drush_get_option('infile'))) : FALSE;
-  $ptrs = array_map('trim', $ptrs);
+  $ptrs = $ptrs ? array_map('trim', $ptrs) : $ptrs;
   $pids = get_collection_members($pid);
   $map  = array();
   $hits = array();
@@ -171,7 +171,9 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
     }
   }
   output_result($map);
-  printf("\nLooking for %d pointers, found %d\nNot found:\n%s\n\n", count($ptrs), count($hits), implode(',', array_diff($ptrs, $hits)));
+  if ($ptrs) {
+    printf("\nLooking for %d pointers, found %d\nNot found:\n%s\n\n", count($ptrs), count($hits), implode(',', array_diff($ptrs, $hits)));
+  }
 }
 
 /**
