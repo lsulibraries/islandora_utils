@@ -170,9 +170,12 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
       $map[] = sprintf("%s => %s", $ptr, $pid);
     }
   }
-  output_result($map);
   if ($ptrs) {
+    output_result(implode(',', array_diff($ptrs, $hits)));
     printf("\nLooking for %d pointers, found %d\nNot found:\n%s\n\n", count($ptrs), count($hits), implode(',', array_diff($ptrs, $hits)));
+  }
+  else {
+    output_result($map);
   }
 }
 
