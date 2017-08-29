@@ -133,7 +133,64 @@ function islandora_utils_drush_command() {
       )
     ),
   );
+  $items['islandora-utils-set-state'] = array(
+    'description' => dt('Set the fedora object state.'),
+    'examples' => array('drush islandora-utils-set-state --namespace=my'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => array(
+      'islandora',
+    ),
+    'options' => array(
+      'namespace' => array(
+        'description' => dt('namespace prefix to look for.'),
+        'required' => TRUE,
+      ),
+      'logfile' => array(
+        'description' => dt('Writable path for error logging.'),
+        'required' => FALSE,
+      ),
+    ),
+    'arguments' => array(
+      'state' => 'inactive or active',
+    ),
+  );
   return $items;
+}
+
+function drush_islandora_utils_set_state($state) {
+  $namespace = drush_get_option('namespace');
+  $log = drush_get_option('logfile', FALSE);
+  $errors = array();
+  $query = <<<EOL
+    SELECT ?pid ?parent 
+    FROM <#ri> 
+    WHERE { {?pid <fedora-rels-ext:isMemberOfCollection> ?parent} 
+    UNION {?pid <fedora-rels-ext:isConstituentOf> ?parent}
+    filter regex(str(?parent), "$namespace") } ORDER BY ?pid
+EOL;
+
+  // Use tuque to get a connection to Fedora and execute the SPARQL query.
+  $tuque = islandora_get_tuque_connection();
+  $repo = $tuque->repository;
+  $results = $repo->ri->sparqlQuery($query);
+  foreach ($results as $data) {
+    $pid = $data['pid']['value'];
+    $object = islandora_object_load($pid);
+    if(!$object) {
+      drush_log("No object found: $pid.", 'warning');
+      $errors[] = $pid;
+    }
+    else {
+      $object->state = $state;
+      drush_log("Set state for $pid to $state.", 'success');
+    }
+
+    if($log && !empty($errors)) {
+      $logdata = "No object found for the following.\n" . implode("\n",$errors);
+      file_put_contents($log, $logdata);
+      drush_log("Some pids could not be found; see log file at $log.", 'warning');
+    }
+  }
 }
 
 function drush_islandora_utils_get_pids_for_collection() {
