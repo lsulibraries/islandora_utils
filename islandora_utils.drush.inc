@@ -13,7 +13,7 @@ function islandora_utils_drush_command() {
 
   $items['islandora-utils-reindex-collection'] = array(
     'description' => dt('Update index via gsearch.'),
-    'examples' => array('drush islandora-reindex-collection-reindex-collection --collection=my:collection'),
+    'examples' => array('drush islandora-reindex-collection-reindex-collection -u 1 active --collection=my:collection'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
     'drupal dependencies' => array(
       'islandora',
