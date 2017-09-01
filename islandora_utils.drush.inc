@@ -30,6 +30,22 @@ function islandora_utils_drush_command() {
       )
     ),
   );
+  $items['islandora-utils-index-namespace'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'namespace' => array(
+        'description' => dt('Specify a namespace to reindex.'),
+        'required' => FALSE,
+      ),
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
+      ),
+    )
+  );
   $items['islandora-utils-index-list'] = array(
     'drupal dependencies' => array(
       'islandora',
@@ -157,11 +173,8 @@ function islandora_utils_drush_command() {
   return $items;
 }
 
-function drush_islandora_utils_set_state($state) {
-  $namespace = drush_get_option('namespace');
-  $log = drush_get_option('logfile', FALSE);
-  $errors = array();
-  $query = <<<EOL
+function get_namespace_members($namespace) {
+    $query = <<<EOL
     SELECT ?pid ?parent 
     FROM <#ri> 
     WHERE { {?pid <fedora-rels-ext:isMemberOfCollection> ?parent} 
@@ -172,8 +185,15 @@ EOL;
   // Use tuque to get a connection to Fedora and execute the SPARQL query.
   $tuque = islandora_get_tuque_connection();
   $repo = $tuque->repository;
-  $results = $repo->ri->sparqlQuery($query);
-  foreach ($results as $data) {
+  return $repo->ri->sparqlQuery($query);
+}
+
+function drush_islandora_utils_set_state($state) {
+  $namespace = drush_get_option('namespace');
+  $log = drush_get_option('logfile', FALSE);
+  $errors = array();
+  $namespace_members = get_namespace_members($namespace);
+  foreach ($namespace_members as $data) {
     $pid = $data['pid']['value'];
     $object = islandora_object_load($pid);
     if(!$object) {
@@ -260,6 +280,14 @@ function drush_islandora_utils_index_list() {
     $list = file_get_contents($infile);
   }
   $pids = explode(',', $list);
+  index_pids($pids);
+}
+
+function drush_islandora_utils_index_namespace () {
+  require_once 'includes/util.inc';
+  $namespace = drush_get_option('namespace');
+  $records = get_namespace_members($namespace);
+  $pids = array_map(function($e){ return $e['pid']['value'];}, $records);
   index_pids($pids);
 }
 
