@@ -347,16 +347,18 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $object = islandora_object_load($pid);
     $repo = $object->repository;
     $api_m = $repo->api->m;
-    $hist = $api_m->getDatastreamHistory($pid, $dsid);
+    if(isset($object[$dsid])){
+      $hist = $api_m->getDatastreamHistory($pid, $dsid);
+    }
+    else{
+      drush_log('datastream non-existant', "success");
+    }
     $count = count($hist);
     if($count > 1){
       if($outfile){
         $toFile = $pid . ',' . $count ;
         file_put_contents($outfile, $toFile.PHP_EOL, FILE_APPEND );
       }
-      drush_log("changed $dsid and number of versions for $pid = $count", "success");
-    }
-    else{
       drush_log("changed $dsid and number of versions for $pid = $count", "success");
     }
   }
