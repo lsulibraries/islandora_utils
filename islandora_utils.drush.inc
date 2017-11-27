@@ -122,6 +122,26 @@ function islandora_utils_drush_command() {
       ),
     ),
   );
+  $items['islandora-utils-get-objects-changed-dsid'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'collection' => array(
+        'description' => dt('Collection PID.'),
+        'required' => TRUE,
+      ),
+      'dsid' => array(
+        'description' => dt('The datastream to look for (case-sensitive).'),
+        'required' => TRUE,
+      ),
+      'outfile' => array(
+        'description' => dt('File to write result list (relative to site root).'),
+        'required' => FALSE,
+        ),
+      ),
+  );
   $items['islandora-utils-create-collection'] = array(
     'description' => dt('Create a collection container.'),
     'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
@@ -313,6 +333,25 @@ function drush_islandora_utils_get_objects_missing_dsid() {
   }
   else {
     drush_log("All objects in $coll have datastream $dsid", "success");
+  }
+}
+
+function drush_islandora_utils_get_objects_changed_dsid(){
+  require_once('includes/util.inc');
+  $coll = drush_get_option('collection');
+  $dsid = drush_get_option('dsid');
+  $pids = get_collection_members($coll);
+
+  foreach($pids as $pid){
+    $object = islandora_object_load($pid);
+    $repo = $object->repository;
+    $api_m = $repo->api->m;
+    $meth = $api_m->getDatastreamHistory($pid, 'MODS');
+    //drush_print_r(count($meth));
+    $count = count($meth);
+    if($count > 1){
+      drush_log("changed $dsid and number of versions for $pid = $count", "success");
+    }
   }
 }
 
