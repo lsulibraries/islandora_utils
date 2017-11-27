@@ -341,15 +341,20 @@ function drush_islandora_utils_get_objects_changed_dsid(){
   $coll = drush_get_option('collection');
   $dsid = drush_get_option('dsid');
   $pids = get_collection_members($coll);
+  $outfile = drush_get_option('outfile');
 
   foreach($pids as $pid){
     $object = islandora_object_load($pid);
     $repo = $object->repository;
     $api_m = $repo->api->m;
-    $meth = $api_m->getDatastreamHistory($pid, 'MODS');
-    //drush_print_r(count($meth));
-    $count = count($meth);
-    if($count > 1){
+    $hist = $api_m->getDatastreamHistory($pid, 'MODS');
+    $count = count($hist);
+    if($outfile && $count > 1){
+      $toFile = $pid . ',' . $count ;
+      file_put_contents($outfile, $toFile.PHP_EOL, FILE_APPEND );
+      drush_log("changed $dsid and number of versions for $pid = $count", "success");
+    }
+    else{
       drush_log("changed $dsid and number of versions for $pid = $count", "success");
     }
   }
