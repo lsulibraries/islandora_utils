@@ -338,6 +338,7 @@ function drush_islandora_utils_get_objects_missing_dsid() {
 
 function drush_islandora_utils_get_objects_changed_dsid(){
   require_once('includes/util.inc');
+  module_load_include('inc', 'islandora', 'includes/datastream.version');
   $coll = drush_get_option('collection');
   $dsid = drush_get_option('dsid');
   $pids = get_collection_members($coll);
@@ -382,31 +383,4 @@ function drush_islandora_utils_create_collection() {
   else {
     islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
   }
-}
-
-function islandora_get_audit_trail($pid, $dsid) {
-  $url = variable_get('islandora_base_url', 'http://localhost:8080/fedora');
-  $connection = islandora_get_tuque_connection(admin, $url);
-  $xml = $connection->api->m->getObjectXml($pid);
-  $simple_xml = simplexml_load_string($xml);
-  $fox_ns = "info:fedora/fedora-system:def/foxml#";
-  $audit_ns = 'info:fedora/fedora-system:def/audit#';
-  $foxml_nodes = $simple_xml->children($fox_ns);
-  foreach ($foxml_nodes as $node) {
-    if ($node->attributes()->ID == "AUDIT") {
-      $content = $node->datastreamVersion->xmlContent;
-      $audit_nodes = $content->children($audit_ns);
-    }
-  }
-  $audit_values = array();
-  if (isset($audit_nodes)) {
-    foreach ($audit_nodes->auditTrail->record as $record) {
-      if ($dsid == $record->componentID) {
-        $values['responsibility'] = $record->responsibility;
-        $values['date'] = $record->date;
-        $audit_values[] = $values;
-      }
-    }
-  }
-  return $audit_values;
 }
