@@ -61,7 +61,7 @@ function output_result($pids){
  * @param string $parent
  *   The PID of the parent collection the newly created collection.
  */
-function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root') {
+function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root', $cmodels = array()) {
 
   try {
     $tuque = new IslandoraTuque();
@@ -69,9 +69,23 @@ function islandora_utils_ingest_collection($title, $descript, $namespace = 'isla
     $collection_object = $repository->constructObject($namespace);
     $collection_object->label = $title;
 
+    if (!empty($cmodels)) {
+      $cmodel_xml = '';
+      foreach($cmodels as $cm) {
+        $cmodel_xml .= sprintf("<content_model dsid=\"%s\" name=\"%s\" namespace=\"%s\" pid=\"%s\"/>",
+            $cm['dsid'],
+            $cm['name'],
+            $cm['namespace'],
+            $cm['pid']
+            );
+      }
+    }
+    else {
+      $cmodel_xml = '';
+    }
     $collection_policy_xml = <<<EOCP
 <collection_policy xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="$title" xsi:schemaLocation="http://www.islandora.ca http://syn.lib.umanitoba.ca/collection_policy.xsd">
-<content_models/>
+<content_models>$cmodel_xml</content_models>
 <search_terms/>
 <staging_area/>
 <relationship>isMemberOfCollection</relationship>
@@ -142,9 +156,17 @@ EODC;
     $mods_datastream->setContentFromString($mods_xml);
     $collection_object->ingestDatastream($mods_datastream);
 
+    // Borrowed from mjordan remote resource soln. pack.
+    $path_to_mods_to_dc_xsl = file_get_contents(drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl');
+    $dc_xml = apply_xslt($path_to_mods_to_dc_xsl, $mods_datastream->content);
+    $dc_datastream = $collection_object->constructDatastream('DC', 'M');
+    $dc_datastream->label = 'DC Record';
+    $dc_datastream->mimetype = 'application/xml';
+    $dc_datastream->setContentFromString($dc_xml);
+    $collection_object->ingestDatastream($dc_datastream);
 
     // Handle TN.
-    $path_to_thumbnail = drupal_get_path('module', 'islandora_basic_collection').'/images/folder.png';
+    $path_to_thumbnail = drupal_get_path('module', 'islandora_basic_collection') . '/images/folder.png';
     $tn_datastream = $collection_object->constructDatastream('TN', 'M');
     $tn_mime_detector = new MimeDetect();
     $tn_datastream->mimetype = $tn_mime_detector->getMimetype($path_to_thumbnail);
@@ -160,13 +182,56 @@ EODC;
     $repository->ingestObject($collection_object);
     drupal_set_message(t('Ingested Islandora collection object %t (PID %p).',
       array('%t' => $collection_object->label, '%p' => $collection_object->id)));
-    watchdog('islandora_migrate_cdm_collections', 'Ingested Islandora collection object %t (PID %p).',
+    watchdog('islandora_utils', 'Ingested Islandora collection object %t (PID %p).',
       array('%t' => $collection_object->label, '%p' => $collection_object->id), WATCHDOG_INFO);
   }
   catch (Exception $e) {
     drupal_set_message(t('Error ingesting Islandora collection object %t (PID %p).',
       array('%t' => $collection_object->title, '%p' => $collection_object->id)), 'error');
-    watchdog('islandora_migrate_cdm_collections', 'Error ingesting Islandora collection object %t (PID %p).',
+    watchdog('islandora_utils', 'Error ingesting Islandora collection object %t (PID %p).',
       array('%t' => $title, '%p' => $collection_object->id), WATCHDOG_ERROR);
+  }
+}
+
+/**
+ * Applies an XSLT transform to an XML string.
+ *
+ * @param string $xslt
+ *   An XSLT stylesheet.
+ * @param string $input_xml
+ *   An XML string.
+ * @param array $params
+ *   An associative array of parameters to the stylesheet.
+ *
+ * @return string
+ *   The transformed XML.
+ */
+function apply_xslt($xslt, $input_xml, $params = array()) {
+  try {
+    $xsl_doc = new DOMDocument();
+    $xsl_doc->loadXML($xslt);
+    $xml_doc = new DOMDocument();
+    $xml_doc->loadXML($input_xml);
+    $xslt_proc = new XSLTProcessor();
+    $xslt_proc->importStylesheet($xsl_doc);
+    if (count($params)) {
+      foreach ($params as $param_name => $param_value) {
+        $xslt_proc->setParameter(NULL, $param_name, check_plain($param_value));
+      }
+    }
+    $output_xml = $xslt_proc->transformToXML($xml_doc);
+    return $output_xml;
+  }
+  catch (exception $e) {
+    $success = array(
+      'success' => FALSE,
+      'messages' => array(
+        array(
+          'message' => t('Failed to apply XSL transform.'),
+          'type' => 'watchdog',
+          'severity' => WATCHDOG_ERROR,
+        ),
+      ),
+    );
   }
 }
