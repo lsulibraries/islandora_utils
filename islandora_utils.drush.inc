@@ -347,10 +347,12 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $object = islandora_object_load($pid);
     $repo = $object->repository;
     $api_m = $repo->api->m;
+    $data = islandora_get_audit_trail($pid,$dsid);
+    $whom = $data[0]['responsibility'];
     if(isset($object[$dsid])){
       $hist = $api_m->getDatastreamHistory($pid, $dsid);
       $when = $hist[0][dsCreateDate];
-     // $whom = $api_mi->;
+
     }
     else{
       drush_log('datastream non-existant', "success");
@@ -358,11 +360,11 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $count = count($hist);
     if($count > 1){
       if($outfile){
-        $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when;
+        $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when.' by: '.$whom;
         file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
       }
-      drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when", "success");
-      drush_print_r($hist);
+      drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when , by $whom", "success");
+      
     }
   }
 }
@@ -380,4 +382,31 @@ function drush_islandora_utils_create_collection() {
   else {
     islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
   }
+}
+
+function islandora_get_audit_trail($pid, $dsid) {
+  $url = variable_get('islandora_base_url', 'http://localhost:8080/fedora');
+  $connection = islandora_get_tuque_connection(admin, $url);
+  $xml = $connection->api->m->getObjectXml($pid);
+  $simple_xml = simplexml_load_string($xml);
+  $fox_ns = "info:fedora/fedora-system:def/foxml#";
+  $audit_ns = 'info:fedora/fedora-system:def/audit#';
+  $foxml_nodes = $simple_xml->children($fox_ns);
+  foreach ($foxml_nodes as $node) {
+    if ($node->attributes()->ID == "AUDIT") {
+      $content = $node->datastreamVersion->xmlContent;
+      $audit_nodes = $content->children($audit_ns);
+    }
+  }
+  $audit_values = array();
+  if (isset($audit_nodes)) {
+    foreach ($audit_nodes->auditTrail->record as $record) {
+      if ($dsid == $record->componentID) {
+        $values['responsibility'] = $record->responsibility;
+        $values['date'] = $record->date;
+        $audit_values[] = $values;
+      }
+    }
+  }
+  return $audit_values;
 }
