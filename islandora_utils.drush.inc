@@ -338,6 +338,7 @@ function drush_islandora_utils_get_objects_missing_dsid() {
 
 function drush_islandora_utils_get_objects_changed_dsid(){
   require_once('includes/util.inc');
+  module_load_include('inc', 'islandora', 'includes/datastream.version');
   $coll = drush_get_option('collection');
   $dsid = drush_get_option('dsid');
   $pids = get_collection_members($coll);
@@ -347,8 +348,12 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $object = islandora_object_load($pid);
     $repo = $object->repository;
     $api_m = $repo->api->m;
+    $data = islandora_get_audit_trail($pid,$dsid);
+    $whom = $data[0]['responsibility'];
     if(isset($object[$dsid])){
       $hist = $api_m->getDatastreamHistory($pid, $dsid);
+      $when = $hist[0][dsCreateDate];
+
     }
     else{
       drush_log('datastream non-existant', "success");
@@ -356,10 +361,11 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $count = count($hist);
     if($count > 1){
       if($outfile){
-        $toFile = $pid . ',' . $count ;
-        file_put_contents($outfile, $toFile.PHP_EOL, FILE_APPEND );
+        $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when.' by: '.$whom;
+        file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
       }
-      drush_log("changed $dsid and number of versions for $pid = $count", "success");
+      drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when , by $whom", "success");
+      
     }
   }
 }
