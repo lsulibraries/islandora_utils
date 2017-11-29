@@ -349,6 +349,8 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $api_m = $repo->api->m;
     if(isset($object[$dsid])){
       $hist = $api_m->getDatastreamHistory($pid, $dsid);
+      $when = $hist[0][dsCreateDate];
+     // $whom = $api_mi->;
     }
     else{
       drush_log('datastream non-existant', "success");
@@ -356,10 +358,11 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     $count = count($hist);
     if($count > 1){
       if($outfile){
-        $toFile = $pid . ',' . $count ;
-        file_put_contents($outfile, $toFile.PHP_EOL, FILE_APPEND );
+        $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when;
+        file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
       }
-      drush_log("changed $dsid and number of versions for $pid = $count", "success");
+      drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when", "success");
+      drush_print_r($hist);
     }
   }
 }
