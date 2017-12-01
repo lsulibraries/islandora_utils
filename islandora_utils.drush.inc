@@ -376,7 +376,9 @@ function drush_islandora_utils_create_collection() {
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
-
+  if(!$parent){
+    $parent = 'islandora:root';
+  }
   if (islandora_object_load($namespace)) {
     drush_log("$namespace has already been ingested.\n", "success");
   }
