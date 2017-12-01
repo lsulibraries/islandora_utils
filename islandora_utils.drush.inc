@@ -122,6 +122,26 @@ function islandora_utils_drush_command() {
       ),
     ),
   );
+  $items['islandora-utils-get-cpd-children-dsids'] = array(
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_basic_collection',
+    ),
+    'options' => array(
+      'pid' => array(
+        'description' => dt('Compound Parent PID.'),
+        'required' => TRUE,
+      ),
+      'dsids' => array(
+        'description' => dt('The datastreams to look for (case-sensitive).'),
+        'required' => TRUE,
+      ),
+      'outfile' => array(
+        'description' => dt('Path to write result dsids (relative to site root).'),
+        'required' => FALSE,
+      ),
+    ),
+  );
   $items['islandora-utils-get-objects-changed-dsid'] = array(
     'drupal dependencies' => array(
       'islandora',
@@ -376,11 +396,25 @@ function drush_islandora_utils_create_collection() {
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
-
+  if(!$parent){
+    $parent = 'islandora:root';
+  }
   if (islandora_object_load($namespace)) {
     drush_log("$namespace has already been ingested.\n", "success");
   }
   else {
     islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
   }
+}
+
+
+function drush_islandora_utils_get_cpd_children_dsids() {
+  require_once('includes/util.inc');
+  //require_once('../islandora_solution_pack_compound')
+  //islandora_compound_object_query_sparql
+  $parent = drush_get_option('pid');
+  $dsids = drush_get_option('dsids', 'OBJ');
+  $outfile = drush_get_option('outfile');
+  islandora_utils_gather_children_dsids($parent, $dsids);
+  //drush_print($outfile);
 }

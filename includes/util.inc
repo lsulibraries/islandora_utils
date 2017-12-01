@@ -170,3 +170,64 @@ EODC;
       array('%t' => $title, '%p' => $collection_object->id), WATCHDOG_ERROR);
   }
 }
+/**
+ * Query for child datastreams on a compound parent (needs to return parent MODS if mods exist.)
+ *
+ *
+ * @param string $parent_pid
+ *   The pid for the parent (check that it is a compound)
+ * @param string $dsids
+ *   The single or multiple dsid to return from the children.
+ */
+
+function islandora_utils_gather_children_dsids($parent_pid, $dsids = 'OBJ'){ 
+//drupal_get_path('islandora_compound_object','Islandora compound object');
+    //module_load_include('inc', 'islandora_compound_object', 'includes/backends');
+//  if(!module_load_include('inc', 'islandora_compound_object', 'includes/backends')){
+//      exit();
+//  }
+  try {
+//  $tuque = new IslandoraTuque();
+//  $repository = $tuque->repository;
+  
+  $parent_object = islandora_object_load($parent_pid);
+  //print_r($parent_object);
+  
+  $child_objects = islandora_utils_compound_query($parent_pid);
+  print_r($child_objects);
+   
+   
+    if(count($dsids) > 1){
+        foreach($dsid as $dsids){
+          drush_print($dsid);
+        }
+    }
+    else { 
+      drush_print($dsids);
+    }
+  }
+  catch (Exception $e) {
+    drupal_set_message(t('Error finding parent object %t (PID %p).',
+    array('%t' => $parent_object->title, '%p' => $parent_object->id)), 'error');
+  }
+}
+  
+  
+function islandora_utils_compound_query($pid) {
+  $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
+  $objects = array();
+
+  $connection = islandora_get_tuque_connection();
+  //print_r($connection);
+  if ($connection) {
+    $query = <<<EOQ
+PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
+SELECT ?pid
+FROM <#ri>
+WHERE { ?pid <fedora-rels-ext:isConstituentOf> <info:fedora/$pid> ;}
+EOQ;
+    $results = $connection->repository->ri->sparqlQuery($query);
+    print_r($results);
+  }
+  return $results;
+}
