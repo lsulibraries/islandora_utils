@@ -151,7 +151,7 @@ function islandora_utils_drush_command() {
       'islandora_basic_collection',
     ),
     'options' => array(
-      'namespace' => array(
+      'pid' => array(
         'description' => dt('PID to assign to the collection.'),
         'required' => TRUE,
       ),
@@ -376,16 +376,16 @@ function drush_islandora_utils_get_objects_changed_dsid(){
 
 function drush_islandora_utils_create_collection() {
   require_once('includes/util.inc');
-  $namespace = drush_get_option('namespace');
+  $pid = drush_get_option('pid');
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
-  $cmodels = drush_get_option('cmodels');
+$cmodels = explode(',',drush_get_option('cmodels'));
 
   if (islandora_object_load($namespace)) {
-    drush_log("$namespace has already been ingested.\n", "success");
+    drush_log("$pid has already been ingested.\n", "success");
   }
   else {
-    islandora_utils_ingest_collection($title, $descript, $namespace, $parent, $cmodels);
+    islandora_utils_ingest_collection($title, $descript, $pid, $parent, $cmodels);
   }
 }
