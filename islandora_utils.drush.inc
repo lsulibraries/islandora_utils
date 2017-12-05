@@ -166,6 +166,10 @@ function islandora_utils_drush_command() {
       'description' => array(
         dt("Description of the collection."),
         'required' => TRUE,
+      ),
+      'cmodels' => array(
+        dt("list of content models to give to the collection. ie islandora:sp_large_image_cmodel,islandora:sp_pdf"),
+        'required' => TRUE,
       )
     ),
   );
@@ -376,11 +380,12 @@ function drush_islandora_utils_create_collection() {
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
+  $cmodels = drush_get_option('cmodels');
 
   if (islandora_object_load($namespace)) {
     drush_log("$namespace has already been ingested.\n", "success");
   }
   else {
-    islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
+    islandora_utils_ingest_collection($title, $descript, $namespace, $parent, $cmodels);
   }
 }
