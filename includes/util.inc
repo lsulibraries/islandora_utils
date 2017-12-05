@@ -72,11 +72,17 @@ function islandora_utils_ingest_collection($title, $descript, $namespace = 'isla
     if (!empty($cmodels)) {
       $cmodel_xml = '';
       foreach($cmodels as $cm) {
-        $cmodel_xml .= sprintf("<content_model dsid=\"%s\" name=\"%s\" namespace=\"%s\" pid=\"%s\"/>",
-            $cm['dsid'],
-            $cm['name'],
-            $cm['namespace'],
-            $cm['pid']
+        $check = islandora_object_load($cm);
+        $ds = islandora_datastream_load('DC', $check);
+        $xml = simplexml_load_string($ds->content);
+        $dc = $xml->children('dc', TRUE);
+        $dc_title = $dc->title;
+        $dc_pid = $dc->identifier;
+            $cmodel_xml .= sprintf("<content_model dsid=\"%s\" name=\"%s\" namespace=\"%s\" pid=\"%s\"/>",
+            '',
+            $dc_title,
+            $check['namespace'],
+            $dc_pid
             );
       }
     }

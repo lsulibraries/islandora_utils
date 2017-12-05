@@ -144,7 +144,7 @@ function islandora_utils_drush_command() {
   );
   $items['islandora-utils-create-collection'] = array(
     'description' => dt('Create a collection container.'),
-    'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
+    'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --pid=my:collection'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
@@ -380,9 +380,9 @@ function drush_islandora_utils_create_collection() {
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
-$cmodels = explode(',',drush_get_option('cmodels'));
+  $cmodels = explode(',',drush_get_option('cmodels'));
 
-  if (islandora_object_load($namespace)) {
+  if (islandora_object_load($pid)) {
     drush_log("$pid has already been ingested.\n", "success");
   }
   else {
