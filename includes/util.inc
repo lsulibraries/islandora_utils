@@ -61,14 +61,14 @@ function output_result($pids){
  * @param string $parent
  *   The PID of the parent collection the newly created collection.
  */
-function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root', $cmodels = array()) {
+function islandora_utils_ingest_collection($title, $descript, $pid = 'islandora', $parent = 'islandora:root', $cmodels = array()) {
 
   try {
     $tuque = new IslandoraTuque();
     $repository = $tuque->repository;
-    $collection_object = $repository->constructObject($namespace);
+    $collection_object = $repository->constructObject($pid);
     $collection_object->label = $title;
-
+    $namespace = array_shift(explode(':',$pid));
     if (!empty($cmodels)) {
       $cmodel_xml = '';
       foreach($cmodels as $cm) {
@@ -81,7 +81,7 @@ function islandora_utils_ingest_collection($title, $descript, $namespace = 'isla
             $cmodel_xml .= sprintf("<content_model dsid=\"%s\" name=\"%s\" namespace=\"%s\" pid=\"%s\"/>",
             '',
             $dc_title,
-            $check['namespace'],
+            $namespace,
             $dc_pid
             );
       }
