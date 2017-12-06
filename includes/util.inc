@@ -72,8 +72,8 @@ function islandora_utils_ingest_collection($title, $descript, $pid = 'islandora'
     if (!empty($cmodels)) {
       $cmodel_xml = '';
       foreach($cmodels as $cm) {
-        $check = islandora_object_load($cm);
-        $ds = islandora_datastream_load('DC', $check);
+        $cmodel_obj = islandora_object_load($cm);
+        $ds = islandora_datastream_load('DC', $cmodel_obj);
         $xml = simplexml_load_string($ds->content);
         $dc = $xml->children('dc', TRUE);
         $dc_title = $dc->title;
