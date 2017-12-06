@@ -377,7 +377,7 @@ function drush_islandora_utils_get_objects_changed_dsid(){
 function drush_islandora_utils_create_collection() {
   require_once('includes/util.inc');
   $pid = drush_get_option('pid');
-  $parent = drush_get_option('parent');
+  $parent = drush_get_option('parent', 'islandora:root');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
   $cmodels = explode(',',drush_get_option('cmodels'));
