@@ -358,7 +358,7 @@ function drush_islandora_utils_get_objects_changed_dsid(){
       $hist = $api_m->getDatastreamHistory($pid, $dsid);
       $when = $hist[0]['dsCreateDate'];
     }
-    else{
+    else {
       drush_log('datastream non-existant', LogLevel::WARNING);
     }
     $count = count($hist);
@@ -369,8 +369,11 @@ function drush_islandora_utils_get_objects_changed_dsid(){
       }
       drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when , by $whom", LogLevel::WARNING);
     }
-    else {
+    elseif($count == 1) {
       drush_log("Only one version found for $dsid in $pid", LogLevel::DEBUG);
+    }
+    else {
+      drush_log("$dsid NOT FOUND in $pid", LogLevel::ERROR);
     }
   }
 }
