@@ -195,9 +195,9 @@ function islandora_utils_drush_command() {
 
 function get_namespace_members($namespace) {
     $query = <<<EOL
-    SELECT ?pid ?parent 
-    FROM <#ri> 
-    WHERE { {?pid <fedora-rels-ext:isMemberOfCollection> ?parent} 
+    SELECT ?pid ?parent
+    FROM <#ri>
+    WHERE { {?pid <fedora-rels-ext:isMemberOfCollection> ?parent}
     UNION {?pid <fedora-rels-ext:isConstituentOf> ?parent}
     filter regex(str(?parent), "$namespace") } ORDER BY ?pid
 EOL;
@@ -241,7 +241,7 @@ function drush_islandora_utils_get_pids_for_collection() {
 }
 
 /**
- * 
+ *
  */
 function drush_islandora_utils_get_cdm_pointers_for_collection() {
   require_once 'includes/util.inc';
@@ -343,9 +343,9 @@ function drush_islandora_utils_get_objects_changed_dsid(){
   $dsid = drush_get_option('dsid');
   $pids = get_collection_members($coll);
   $outfile = drush_get_option('outfile');
-  drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG); 
+  drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
   foreach($pids as $pid){
-    drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG); 
+    drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
     $object = islandora_object_load($pid);
     $repo = $object->repository;
     $api_m = $repo->api->m;
@@ -384,9 +384,7 @@ function drush_islandora_utils_create_collection() {
   $parent = drush_get_option('parent');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
-  if(!$parent){
-    $parent = 'islandora:root';
-  }
+
   if (islandora_object_load($namespace)) {
     drush_log("$namespace has already been ingested.\n", "success");
   }
