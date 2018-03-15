@@ -170,8 +170,8 @@ function islandora_utils_drush_command() {
     ),
   );
   $items['islandora-utils-set-state'] = array(
-    'description' => dt('Set the fedora object state.'),
-    'examples' => array('drush islandora-utils-set-state --namespace=my'),
+    'description' => dt('Set the fedora object state for a PID or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
+    'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
@@ -179,7 +179,11 @@ function islandora_utils_drush_command() {
     'options' => array(
       'namespace' => array(
         'description' => dt('namespace prefix to look for.'),
-        'required' => TRUE,
+        'required' => FALSE,
+      ),
+      'pid' => array(
+        'description' => dt('PID to set state for.'),
+        'required' => FALSE,
       ),
       'logfile' => array(
         'description' => dt('Writable path for error logging.'),
@@ -210,10 +214,22 @@ EOL;
 
 function drush_islandora_utils_set_state($state) {
   $namespace = drush_get_option('namespace');
+  $pid = drush_get_option('pid');
+  if(!$namespace && !$pid) {
+    drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
+    return;
+  }
   $log = drush_get_option('logfile', FALSE);
   $errors = array();
-  $namespace_members = get_namespace_members($namespace);
-  foreach ($namespace_members as $data) {
+  $list = array();
+
+  if (isset($pid)){
+    $list = array_merge($list, array(array('pid' => array('value' => $pid))));
+  }
+  if(isset($namespace)) {
+    $list = array_merge($list, get_namespace_members($namespace));
+  }
+  foreach ($list as $data) {
     $pid = $data['pid']['value'];
     $object = islandora_object_load($pid);
     if(!$object) {
