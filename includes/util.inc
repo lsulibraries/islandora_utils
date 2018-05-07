@@ -23,15 +23,15 @@ function index_pids($list){
           drush_log("Reindexed $pid.       ". format_times($timer, $elapsed), 'success');
         }
 
-        $last    = $timer['time'];
-    }
+        $idx++;
+        if($idx == 1000) {
+          $remaining = array_slice($list, $idx);
+          $ts = strftime('%Y-%m-%d-%H-%M', time());
+          file_put_contents("/tmp/reindex-resume-$ts.csv", implode(',', $remaining));
+          $idx = 0;
+        }
 
-    $idx++;
-    if($idx == 1000) {
-      $remaining = array_slice($list, $idx);
-      $ts = strftime('%Y-%m-%d-%H-%M', time());
-      file_put_contents("/tmp/reindex-resume-$ts.csv", implode(',', $remaining));
-      $idx = 0;
+        $last    = $timer['time'];
     }
 
 
