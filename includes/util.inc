@@ -25,7 +25,7 @@ function index_pids($list){
 
         $idx++;
         if($idx == 1000) {
-          $remaining = array_slice($list, $idx);
+          $remaining = array_slice($list, key($list));
           $ts = strftime('%Y-%m-%d-%H-%M', time());
           file_put_contents("/tmp/reindex-resume-$ts.csv", implode(',', $remaining));
           $idx = 0;
