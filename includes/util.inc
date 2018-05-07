@@ -7,19 +7,36 @@ function index_pids($list){
     $last = 0;
     $failures = array();
 
+    $idx = 0;
     foreach($list as $pid){
         timer_start('gsearch');
-
-        if(!speak_to_gsearch($pid, 'index')){
-            $failures[] = $pid;
-        }
+        $gsearch_ok = speak_to_gsearch($pid, 'index');
 
         $timer   = timer_stop('gsearch');
         $elapsed = $timer['time'] - $last;
-        drush_log("Reindexed $pid.       ". format_times($timer, $elapsed), 'success');
+
+        if(!$gsearch_ok){
+          $failures[] = $pid;
+          drush_log("Failed to reindex $pid.       ". format_times($timer, $elapsed), 'warning');
+        }
+        else {
+          drush_log("Reindexed $pid.       ". format_times($timer, $elapsed), 'success');
+        }
 
         $last    = $timer['time'];
     }
+
+    $idx++;
+    if($idx == 1000) {
+      $remaining = array_slice($list, $idx);
+      $ts = strftime('%Y-%m-%d-%H-%M', time());
+      file_put_contents("/tmp/reindex-resume-$ts.csv", implode(',', $remaining));
+      $idx = 0;
+    }
+
+
+
+
     if(!empty($failures)){
         $cnt = count($failures);
         drush_log("$cnt items failed or timed-out during indexing\n". output_result($failures), 'warning');
@@ -36,7 +53,7 @@ function csv_format_pid_list($pids){
 }
 
 /**
- * 
+ *
  * @param array $pids
  */
 function output_result($pids){
