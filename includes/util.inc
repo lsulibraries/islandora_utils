@@ -7,8 +7,8 @@ function index_pids($list){
     $last = 0;
     $failures = array();
 
-    $idx = 0;
-    foreach($list as $pid){
+    $chunk = 0;
+    foreach($list as $idx => $pid){
         timer_start('gsearch');
         $gsearch_ok = speak_to_gsearch($pid, 'index');
 
@@ -23,12 +23,12 @@ function index_pids($list){
           drush_log("Reindexed $pid.       ". format_times($timer, $elapsed), 'success');
         }
 
-        $idx++;
-        if($idx == 1000) {
-          $remaining = array_slice($list, key($list));
+        $chunk++;
+        if($chunk == 1000) {
+          $remaining = array_slice($list, $idx);
           $ts = strftime('%Y-%m-%d-%H-%M', time());
           file_put_contents("/tmp/reindex-resume-$ts.csv", implode(',', $remaining));
-          $idx = 0;
+          $chunk = 0;
         }
 
         $last    = $timer['time'];
