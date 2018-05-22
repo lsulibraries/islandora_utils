@@ -357,27 +357,35 @@ function drush_islandora_utils_get_objects_changed_dsid(){
   module_load_include('inc', 'islandora', 'includes/datastream.version');
   $coll = drush_get_option('collection');
   $dsid = drush_get_option('dsid');
-  $pids = get_collection_members($coll);
   $outfile = drush_get_option('outfile');
+  $pids = get_collection_members($coll);
+  $tuque = islandora_get_tuque_connection();
+  $repo = $tuque->repository;
   drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
   foreach($pids as $pid){
     drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
-    $object = islandora_object_load($pid);
-    $repo = $object->repository;
-    $api_m = $repo->api->m;
-    $data = islandora_get_audit_trail($pid,$dsid);
-
-    if(!empty($data) && array_key_exists(0, $data) && array_key_exists('responsibility', $data[0])){
-      $whom = $data[0]['responsibility'];
+    $audit_values = islandora_get_audit_trail($pid, $dsid);
+    $islandora_object = islandora_object_load($pid);
+    $datastream = islandora_datastream_load($dsid, $islandora_object);
+    $rows = array();
+    foreach ($datastream as $version => $datastream_version) {
+      $row = array();
+//      if (!$audit_values) {
+       $responsibility = $islandora_object->owner;       
+//      }
+//      else {
+      foreach ($audit_values as $audit_value) {
+        if ($audit_value['date'] == $datastream_version->createdDate) {
+          $responsibility = $audit_value['responsibility'];
+//        }
+      }
+      }
+      $row[] = array('user' => $responsibility,
+        'time' => $datastream_version->createdDate->format(DATE_RFC850));
+      $rows[] = $row;
     }
-    if(isset($object[$dsid])){
-      $hist = $api_m->getDatastreamHistory($pid, $dsid);
-      $when = $hist[0]['dsCreateDate'];
-    }
-    else {
-      drush_log('datastream non-existant', LogLevel::WARNING);
-    }
-    $count = count($hist);
+  }
+    $count = count($rows);
     if($count > 1){
       if($outfile){
         $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when.' by: '.$whom;
@@ -392,7 +400,6 @@ function drush_islandora_utils_get_objects_changed_dsid(){
       drush_log("$dsid NOT FOUND in $pid", LogLevel::ERROR);
     }
   }
-}
 
 function drush_islandora_utils_create_collection() {
   require_once('includes/util.inc');
