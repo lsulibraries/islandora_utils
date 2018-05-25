@@ -313,7 +313,7 @@ function drush_islandora_utils_index_list() {
     throw new Exception('One of the options [infile,list] is required.');
   }
   elseif (!$list) {
-    $list = file_get_contents($infile);
+    $list = trim(file_get_contents($infile));
   }
   $pids = explode(',', $list);
   index_pids($pids);
