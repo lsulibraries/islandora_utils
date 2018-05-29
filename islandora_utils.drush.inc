@@ -144,14 +144,14 @@ function islandora_utils_drush_command() {
   );
   $items['islandora-utils-create-collection'] = array(
     'description' => dt('Create a collection container.'),
-    'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --namespace=my:collection'),
+    'examples' => array('drush islandora-utils-create-collection --parent=islandora:root --pid=my:collection'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
       'islandora_basic_collection',
     ),
     'options' => array(
-      'namespace' => array(
+      'pid' => array(
         'description' => dt('PID to assign to the collection.'),
         'required' => TRUE,
       ),
@@ -165,6 +165,10 @@ function islandora_utils_drush_command() {
       ),
       'description' => array(
         dt("Description of the collection."),
+        'required' => TRUE,
+      ),
+      'cmodels' => array(
+        dt("list of content models to give to the collection. ie islandora:sp_large_image_cmodel,islandora:sp_pdf"),
         'required' => TRUE,
       )
     ),
@@ -396,15 +400,16 @@ function drush_islandora_utils_get_objects_changed_dsid(){
 
 function drush_islandora_utils_create_collection() {
   require_once('includes/util.inc');
-  $namespace = drush_get_option('namespace');
-  $parent = drush_get_option('parent');
+  $pid = drush_get_option('pid');
+  $parent = drush_get_option('parent', 'islandora:root');
   $title = drush_get_option('title');
   $descript = drush_get_option('description');
+  $cmodels = explode(',',drush_get_option('cmodels'));
 
-  if (islandora_object_load($namespace)) {
-    drush_log("$namespace has already been ingested.\n", "success");
+  if (islandora_object_load($pid)) {
+    drush_log("$pid has already been ingested.\n", "success");
   }
   else {
-    islandora_utils_ingest_collection($title, $descript, $namespace, $parent);
+    islandora_utils_ingest_collection($title, $descript, $pid, $parent, $cmodels);
   }
 }
