@@ -364,8 +364,8 @@ function drush_islandora_utils_get_objects_changed_dsid(){
   foreach($pids as $pid) {
     drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
     $islandora_object = islandora_object_load($pid);
-    $datastream = islandora_datastream_load($dsid, $islandora_object);
-    if (!$islandora_object[$dsid]) {
+    $datastream = $islandora_object[$dsid];
+    if (!$datastream) {
       drush_log("$dsid NOT FOUND for $pid", LogLevel::DEBUG);
       continue;
     }
@@ -373,6 +373,7 @@ function drush_islandora_utils_get_objects_changed_dsid(){
     # But all $datastream values are active versions.  
     # So, we loop over the $datastream items, and pull in 
     # extra information from the matching #audit_values item.
+    # Date of creation is treated as a unique id for matching items.
     $rows = array();
     $audit_values = islandora_get_audit_trail($pid, $dsid);
     foreach ($datastream as $version => $datastream_version) {
@@ -386,11 +387,9 @@ function drush_islandora_utils_get_objects_changed_dsid(){
       }
       $edited_date = $datastream_version->createdDate->format(DATE_RFC850);
       foreach ($rows as &$item) {
-        if ($item['pid'] == ($pid . "." . $dsid)) {
-          if (strval($item['user']) == strval($responsibility)) {
-            array_push($item['time'], $edited_date);
-            continue 2;
-          }
+        if (strval($item['user']) == strval($responsibility)) {
+          array_push($item['time'], $edited_date);
+          continue 2;
         }
       }
       $row = array(
@@ -399,7 +398,7 @@ function drush_islandora_utils_get_objects_changed_dsid(){
         'time' => array($edited_date),
         );
       $rows[] = $row;
-      }
+    }
     $pid_histories[] = $rows;
   }
   $toFile = json_encode($pid_histories);
