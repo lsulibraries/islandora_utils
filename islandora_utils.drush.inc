@@ -359,38 +359,34 @@ function drush_islandora_utils_get_objects_changed_dsid(){
   $dsid = drush_get_option('dsid');
   $outfile = drush_get_option('outfile');
   $pids = get_collection_members($coll);
-  $tuque = islandora_get_tuque_connection();
-  $repo = $tuque->repository;
   drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
   $pid_histories = array();
   foreach($pids as $pid) {
     drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
-    $audit_values = islandora_get_audit_trail($pid, $dsid);
     $islandora_object = islandora_object_load($pid);
     $datastream = islandora_datastream_load($dsid, $islandora_object);
     if (!$islandora_object[$dsid]) {
       drush_log("$dsid NOT FOUND for $pid", LogLevel::DEBUG);
       continue;
     }
+    # $audit_values include item versions that were deleted, etc.
+    # But all $datastream values are active versions.  
+    # So, we loop over the $datastream items, and pull in 
+    # extra information from the matching #audit_values item.
     $rows = array();
-    # all $datastream items are valid, but not all $audit_values are.
+    $audit_values = islandora_get_audit_trail($pid, $dsid);
     foreach ($datastream as $version => $datastream_version) {
       $responsibility = $islandora_object->owner;    
       # finds a better author name from audit_value, if possible.
       foreach ($audit_values as $audit_value) {
         if ($audit_value['date'] == $datastream_version->createdDate) {
           $responsibility = strval($audit_value['responsibility']);
+          break;
         }
       }
       $edited_date = $datastream_version->createdDate->format(DATE_RFC850);
       foreach ($rows as &$item) {
-        echo ($item['pid'] . " versus " . ($pid . "." . $dsid) . "\n");
         if ($item['pid'] == ($pid . "." . $dsid)) {
-//          echo "equals?\n";
-//          echo strval($item['user']) . "\n";
-//          echo strval($responsibility). "\n";
-//          echo strval($item['user']) == strval($responsibility);
-//          echo "\n";
           if (strval($item['user']) == strval($responsibility)) {
             array_push($item['time'], $edited_date);
             continue 2;
@@ -402,39 +398,22 @@ function drush_islandora_utils_get_objects_changed_dsid(){
         'user' => $responsibility,
         'time' => array($edited_date),
         );
-//      echo "row\n";
-//      var_dump($row);
       $rows[] = $row;
       }
-    echo "rows\n";
-    var_dump($rows);
     $pid_histories[] = $rows;
   }
-  echo "pid histories\n";
-  var_dump($pid_histories);
   $toFile = json_encode($pid_histories);
   file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
-
-
-
   foreach ($pid_histories as $counter=>$per_pid) {
-//    echo "per pid\n";
-//    echo $per_pid;
-//    echo "\n";
-//    var_dump($per_pid);
     $notify = false;
     $editors_count = count($per_pid);
     if ($editors_count > 1) {
       $notify = true;
     }
     foreach ($per_pid as $per_editor) {
-//      echo "per_editor\n";
-//      var_dump($per_editor);
       $editor = $per_editor['user'];
       $pid = $per_editor['pid'];
       $times_array = $per_editor['time'];
-//      echo "per editor info\n";
-//      echo $editor . ", " . $pid . ", " . $times_array . "\n";
       $times_count = count($times_array);
       $times_string = implode('; ', $times_array);
       if ($times_count > 1) {
