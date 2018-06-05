@@ -354,55 +354,55 @@ function drush_islandora_utils_get_objects_missing_dsid() {
 
 
 function get_history_of_pid($pid, $dsid){
-    drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
-    $islandora_object = islandora_object_load($pid);
-    $datastream = $islandora_object[$dsid];
-    if (!$datastream) {
-      drush_log("$dsid NOT FOUND for $pid", LogLevel::DEBUG);
-      return False;
-    }
-    # $audit_values include item versions that were deleted, etc.
-    # But all $datastream values are active versions.  
-    # So, we loop over the $datastream items, and pull in 
-    # extra information from the matching #audit_values item.
-    # Date of creation is treated as a unique id for matching items.
-    $rows = array();
-    $audit_values = islandora_get_audit_trail($pid, $dsid);
-    foreach ($datastream as $version => $datastream_version) {
-      $responsibility = $islandora_object->owner;    
-      # finds a better author name from audit_value, if possible.
-      foreach ($audit_values as $audit_value) {
-        if ($audit_value['date'] == $datastream_version->createdDate) {
-          $responsibility = strval($audit_value['responsibility']);
-          break;
-        }
+  drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
+  $islandora_object = islandora_object_load($pid);
+  $datastream = $islandora_object[$dsid];
+  if (!$datastream) {
+    drush_log("$dsid NOT FOUND for $pid", LogLevel::DEBUG);
+    return False;
+  }
+  # $audit_values include item versions that were deleted, etc.
+  # But all $datastream values are active versions.  
+  # So, we loop over the $datastream items, and pull in 
+  # extra information from the matching #audit_values item.
+  # Date of creation is treated as a unique id for matching items.
+  $rows = array();
+  $audit_values = islandora_get_audit_trail($pid, $dsid);
+  foreach ($datastream as $version => $datastream_version) {
+    $responsibility = $islandora_object->owner;
+    // finds a better author name from audit_value, if possible.
+    foreach ($audit_values as $audit_value) {
+      if ($audit_value['date'] == $datastream_version->createdDate) {
+        $responsibility = strval($audit_value['responsibility']);
+        break;
       }
-      $edited_date = $datastream_version->createdDate->format(DATE_RFC850);
-      foreach ($rows as &$item) {
-        if (strval($item['user']) == strval($responsibility)) {
-          array_push($item['time'], $edited_date);
-          continue 2;
-        }
-      }
-      $row = array(
-        'pid' => $pid . "." . $dsid, 
-        'user' => $responsibility,
-        'time' => array($edited_date),
-        );
-      $rows[] = $row;
     }
-    return $rows;
+    $edited_date = $datastream_version->createdDate->format(DATE_RFC850);
+    foreach ($rows as &$item) {
+      if (strval($item['user']) == strval($responsibility)) {
+        array_push($item['time'], $edited_date);
+        continue 2;
+      }
+    }
+    $row = array(
+      'pid' => $pid . "." . $dsid, 
+      'user' => $responsibility,
+      'time' => array($edited_date),
+      );
+    $rows[] = $row;
+  }
+  return $rows;
 }
 
 
 function filter_unchanged_from_pid_history($pids_histories){
   $retained_history = array();
-  foreach ($pids_histories as $pid_history){
+  foreach ($pids_histories as $pid_history) {
     if (count($pid_history) > 1) {
       $retained_history[] = $pid_history;
       continue;
     }
-    foreach ($pid_history as $event){
+    foreach ($pid_history as $event) {
       if (count($event['time']) > 1) {
         $retained_history[] = $pid_history;
         continue 2;
@@ -412,9 +412,8 @@ function filter_unchanged_from_pid_history($pids_histories){
   return $retained_history;
 }
 
-
 function console_print_results($pids_histories, $dsid){
-    foreach ($pids_histories as $counter=>$per_pid) {
+  foreach ($pids_histories as $counter=>$per_pid) {
     $notify = false;
     $editors_count = count($per_pid);
     if ($editors_count > 1) {
