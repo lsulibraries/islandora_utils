@@ -353,6 +353,30 @@ function drush_islandora_utils_get_objects_missing_dsid() {
 }
 
 
+function drush_islandora_utils_get_objects_changed_dsid(){
+  require_once('includes/util.inc');
+  module_load_include('inc', 'islandora', 'includes/datastream.version');
+  $coll = drush_get_option('collection');
+  $dsid = drush_get_option('dsid');
+  $outfile = drush_get_option('outfile');
+  $pids = get_collection_members($coll);
+  drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
+  $pids_histories = array();
+  foreach($pids as $pid) {
+    $pid_history = get_history_of_pid($pid, $dsid);
+    if ($pid_history) {
+      $pids_histories[] = $pid_history;
+    }
+  }
+  $filtered_histories = filter_unchanged_from_pid_history($pids_histories);
+  if ($outfile) {
+    $toFile = json_encode($filtered_histories);
+    file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
+  }
+  console_print_results($filtered_histories, $dsid);
+}
+
+
 function get_history_of_pid($pid, $dsid){
   drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
   $islandora_object = islandora_object_load($pid);
@@ -412,51 +436,20 @@ function filter_unchanged_from_pid_history($pids_histories){
   return $retained_history;
 }
 
-function console_print_results($pids_histories, $dsid){
-  foreach ($pids_histories as $counter=>$per_pid) {
-    $notify = false;
-    $editors_count = count($per_pid);
-    if ($editors_count > 1) {
-      $notify = true;
-    }
+
+function console_print_results($filtered_histories, $dsid){
+  foreach ($filtered_histories as $counter=>$per_pid) {
     foreach ($per_pid as $per_editor) {
       $editor = $per_editor['user'];
       $pid = $per_editor['pid'];
       $times_array = $per_editor['time'];
       $times_count = count($times_array);
       $times_string = implode('; ', $times_array);
-      if ($times_count > 1) {
-        $notify = true;
-      }
-      if ($notify) {
-        drush_log("$dsid for $pid has $times_count changes by $editor on $times_string", LogLevel::WARNING);
-      }
-    } 
-    if ($notify) {
-      drush_log("$dsid for $pid has $editors_count editors", LogLevel::WARNING);
+      drush_log("$dsid for $pid has $times_count changes by $editor on $times_string", LogLevel::WARNING);
     }
+    $editors_count = count($per_pid);
+    drush_log("$dsid for $pid has $editors_count editors", LogLevel::WARNING);
   }
-}
-
-function drush_islandora_utils_get_objects_changed_dsid(){
-  require_once('includes/util.inc');
-  module_load_include('inc', 'islandora', 'includes/datastream.version');
-  $coll = drush_get_option('collection');
-  $dsid = drush_get_option('dsid');
-  $outfile = drush_get_option('outfile');
-  $pids = get_collection_members($coll);
-  drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
-  $pids_histories = array();
-  foreach($pids as $pid) {
-    $pid_history = get_history_of_pid($pid, $dsid);
-    if ($pid_history) {
-      $pids_histories[] = $pid_history;
-    }
-  }
-  $filtered_histories = filter_unchanged_from_pid_history($pids_histories);
-  $toFile = json_encode($filtered_histories);
-  file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
-  console_print_results($pids_histories, $dsid);
 }
 
 
