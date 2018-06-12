@@ -271,9 +271,7 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
     if ($cmodel == "islandora:pageCModel") {
       $ptr = find_pointer_for_page($obj);
     } else {
-      $mods = $obj->getDatastream('MODS')->content;
-      $xml = simplexml_load_string($mods);
-      $ptr = $xml->extension->CONTENTdmData->pointer;
+      $ptr = find_pointer_for_normal_obj($obj);
     }
     if ($ptrs && in_array($ptr, $ptrs)) {
       $map[] = $pid;
@@ -297,7 +295,17 @@ function find_pointer_for_page($obj) {
   $seq_num = $seq_array[0]['object']['value'];
   $book_array = $obj->relationships->get("http://islandora.ca/ontology/relsext#", "isPageOf");
   $book_pid = $book_array[0]['object']['value'];
-  return "$book_pid PAGE $seq_num";
+  $book_obj = islandora_object_load($book_pid);
+  $book_pointer = find_pointer_for_normal_obj($book_obj);
+  $ptr = "$book_pointer PAGE $seq_num";
+  return $ptr;
+}
+
+function find_pointer_for_normal_obj($obj) {
+  $mods = $obj->getDatastream('MODS')->content;
+  $xml = simplexml_load_string($mods);
+  $ptr = $xml->extension->CONTENTdmData->pointer;
+  return $ptr;
 }
 
 /**
