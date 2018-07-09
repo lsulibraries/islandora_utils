@@ -61,12 +61,10 @@ function output_result($pids){
  * @param string $parent
  *   The PID of the parent collection the newly created collection.
  */
-function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root', $cmodels = array()) {
-
+function islandora_utils_ingest_collection($title, $descript, $namespace = 'islandora', $parent = 'islandora:root', $cmodels = array(), $user = NULL) {
   try {
-    $tuque = new IslandoraTuque();
-    $repository = $tuque->repository;
-    $collection_object = $repository->constructObject($namespace);
+    $tuque = islandora_get_tuque_connection($user);
+    $collection_object = $tuque->repository->constructObject($namespace);
     $collection_object->label = $title;
 
     if (!empty($cmodels)) {
@@ -179,7 +177,7 @@ EODC;
     $rels->add('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection', $parent, FALSE);
     $rels->add('info:fedora/fedora-system:def/model#', 'hasModel', 'islandora:collectionCModel', FALSE);
 
-    $repository->ingestObject($collection_object);
+    $tuque->repository->ingestObject($collection_object);
     drupal_set_message(t('Ingested Islandora collection object %t (PID %p).',
       array('%t' => $collection_object->label, '%p' => $collection_object->id)));
     watchdog('islandora_utils', 'Ingested Islandora collection object %t (PID %p).',
@@ -187,7 +185,7 @@ EODC;
   }
   catch (Exception $e) {
     drupal_set_message(t('Error ingesting Islandora collection object %t (PID %p).',
-      array('%t' => $collection_object->title, '%p' => $collection_object->id)), 'error');
+      array('%t' => $collection_object->label, '%p' => $collection_object->id)), 'error');
     watchdog('islandora_utils', 'Error ingesting Islandora collection object %t (PID %p).',
       array('%t' => $title, '%p' => $collection_object->id), WATCHDOG_ERROR);
   }
