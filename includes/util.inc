@@ -233,3 +233,58 @@ function apply_xslt($xslt, $input_xml, $params = array()) {
     );
   }
 }
+
+/**
+ * @params associative array that will be extract() -ed.
+ */
+function islandora_utils_get_mods($params) {
+  extract($params);
+  $mods_xml = <<<EODC
+<?xml version="1.0"?>
+<mods xmlns="http://www.loc.gov/mods/v3" xmlns:mods="http://www.loc.gov/mods/v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink">
+<titleInfo>
+  <title>$title</title>
+</titleInfo>
+<name type="personal">
+  <namePart/>
+  <role>
+    <roleTerm authority="marcrelator" type="text"/>
+  </role>
+</name>
+<typeOfResource />
+<genre authority="lctgm"/>
+<originInfo>
+  <dateCreated>$date</dateCreated>
+</originInfo>
+<language>
+  <languageTerm authority="iso639-2b" type="code">eng</languageTerm>
+</language>
+<abstract>$description</abstract>
+<identifier type="local">$pid</identifier>
+<physicalDescription>
+  <form authority="marcform"/>
+  <extent/>
+</physicalDescription>
+<note/>
+<accessCondition/>
+<subject>
+  <topic/>
+  <geographic/>
+  <temporal/>
+  <hierarchicalGeographic>
+    <continent/>
+    <country/>
+    <province/>
+    <region/>
+    <county/>
+    <city/>
+    <citySection/>
+  </hierarchicalGeographic>
+  <cartographics>
+    <coordinates/>
+  </cartographics>
+</subject>
+</mods>
+EODC;
+  return $mods_xml;
+}

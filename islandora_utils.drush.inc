@@ -194,7 +194,62 @@ function islandora_utils_drush_command() {
       'state' => 'inactive or active',
     ),
   );
+  $items['islandora-utils-ingest-item'] = array(
+    'description' => "Ingest an item of arbitrary type.",
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => ['islandora'],
+    'options' => [
+      'cmodel' => [
+        'description' => dt('Model to create'),
+        'required' => TRUE,
+        ],
+      'collection' => [
+        'description' => dt('Collection to which this thing should belong.'),
+        'required' => TRUE,
+        ],
+      'pid' => [
+        'description' => 'pid to assign',
+        'required' => TRUE,
+        ],
+      'title' => [
+        'description' => dt('Title for the new item.'),
+        'requiered' => TRUE,
+        ],
+      'date' => [
+        'description' => 'Required for items of type newspaper.',
+        'required' => FALSE,
+        ],
+      ],
+  );
   return $items;
+}
+
+function drush_islandora_utils_ingest_item() {
+  module_load_include('inc', 'islandora_utils', 'includes/util');
+  $options = ['cmodel', 'collection', 'pid', 'title', 'date'];
+  $params = [];
+  foreach($options as $option) {
+    $value = drush_get_option($option, FALSE);
+    $params[$option] = $value;
+  }
+  extract($params);
+
+  try {
+    $tuque = new IslandoraTuque();
+    $repository = $tuque->repository;
+    $object = $repository->constructObject($pid);
+    $object->label = $title;
+    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection);
+    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $cmodel);
+    $ds_mods = $object->constructDatastream('MODS');
+    $mods_xml = islandora_utils_get_mods($params);
+    $ds_mods->setContentFromString($mods_xml);
+    $object->ingestDatastream($ds_mods);
+    $repository->ingestObject($object);
+  }
+  catch(Exception $e) {
+    throw new Exception($e);
+  }
 }
 
 function get_namespace_members($namespace) {
