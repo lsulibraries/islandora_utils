@@ -288,13 +288,3 @@ function islandora_utils_get_mods($params) {
 EODC;
   return $mods_xml;
 }
-
-function childpages($parentpid){
-$tuque = islandora_get_tuque_connection();
-$query = <<<EOQ
-SELECT ?page
-FROM <#ri>
-WHERE {?page <http://islandora.ca/ontology/relsext#isPageOf> <info:fedora/$parentpid>}
-EOQ;
-$childpages =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-}

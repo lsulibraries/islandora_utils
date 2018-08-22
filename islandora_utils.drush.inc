@@ -230,10 +230,6 @@ function islandora_utils_drush_command() {
       'islandora_paged_content',
     ),
     'options' => array(
-      'path' => array(
-        'description' => dt('path for files'),
-        'required' => TRUE,
-      ),
       'pid' => array(
         'description' => dt('single pid.'),
         'required' => TRUE,
@@ -252,28 +248,29 @@ function drush_islandora_utils_ocr_consolidate() {
   module_load_include('inc','islandora_utils','includes/util');
   module_load_include('inc','islandora_paged_content', 'includes/utilities');
   $pid = drush_get_option('pid', FALSE);
-  $path = drush_get_option('path', FALSE);
   $pages_ocr = array();
   // foreach($pidlist as $pid) {
 
-    $path = "$path/$pid" ;
-    $pages = childpages($pid);
+    $path = "tmp/$pid" ;
+    $parent_obj = islandora_object_load($pid);
+    $pages = islandora_paged_content_get_pages_ri($parent_obj);
     foreach($pages as $page) {
-      $page_obj = islandora_object_load($page['value']);
-      $dsid = 'OCR';
-      if(isset($page_obj[$dsid])) {
-        $pages_ocr[$page['value']] = $page_obj[$dsid];
+      $page_pid = $page['pid'];
+      $page_obj = islandora_object_load($page_pid);
+      if(isset($page_obj['OCR'])) {
+        $pages_ocr[] = $page_obj['OCR']->content;
       }
-
     }
-    $appended = islandora_paged_content_ocr_append($path, $pages_ocr);
-
-    $issue = islandora_object_load($pid);
-    $datastream = $issue->constructDatastream($dsid);
+    $big_string = '';
+    foreach ($pages_ocr as $key => $string) {
+      $big_string .= $string;
+    }
+    $datastream = $parent_obj->constructDatastream('OCR');
     $datastream->label = 'Consolidated OCR';
     $datastream->mimeType = 'text/plain';
-    $datastream->setContentFromFile($path);
-    //$issue->ingestDatastream($appended);
+    $datastream->setContentFromString($big_string);
+    drush_print_r($datastream);
+    //$parent_obj->ingestDatastream($datastream);
   // }
 }
 
