@@ -221,7 +221,52 @@ function islandora_utils_drush_command() {
         ],
       ],
   );
+  $items['islandora-utils-ocr-consolidate'] = array(
+    'description' => dt('Consolidate multiple ocr files, for newspapers or books.'),
+    'examples' => array('drush islandora-utils-ocr-consolidate -u 1 --pid'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_paged_content',
+    ),
+    'options' => array(
+      'path' => array(
+        'description' => dt('path for files'),
+        'required' => TRUE,
+      ),
+      'pidfile' => array(
+        'description' => dt('list of \n separated pids.'),
+        'required' => TRUE,
+      ),
+    ),
+  );
   return $items;
+}
+
+function drush_islandora_utils_ocr_consolidate() {
+
+  module_load_include('inc','includes/util');
+  module_load_include('inc','islandoar_paged_content', 'includes/utilities');
+  $pidlist = drush_get_option('pidfile', FALSE);
+  $pages_ocr = array();
+  foreach($pidlist as $pid) {
+    $path = "/tmp/$pid".'ocr' ;
+    $pages = childpages($pid);
+    foreach($pages as $page) {
+      $page_obj = islandora_object_load($page['value']);
+      $dsid = 'OCR';
+      if(isset($page_obj[$dsid])) {
+        $pages_ocr[$page['value']] = $page_obj[$dsid];
+      }
+    }
+    islandora_paged_content_ocr_append($path, $pages_ocr );
+    $issue = islandora_object_load($pid);
+    $datastream = $issue->constructDatastream($dsid);
+    $datastream->label = 'Consolidated OCR';
+    $datastream->mimeType = 'text/plain';
+    $datastream->setContentFromFile($path);
+    $issue->ingestDatastream($datastream);
+  }
 }
 
 function drush_islandora_utils_ingest_item() {
@@ -441,8 +486,8 @@ function get_history_of_pid($pid, $dsid){
     return False;
   }
   # $audit_values include item versions that were deleted, etc.
-  # But all $datastream values are active versions.  
-  # So, we loop over the $datastream items, and pull in 
+  # But all $datastream values are active versions.
+  # So, we loop over the $datastream items, and pull in
   # extra information from the matching #audit_values item.
   # Date of creation is treated as a unique id for matching items.
   $rows = array();
@@ -464,7 +509,7 @@ function get_history_of_pid($pid, $dsid){
       }
     }
     $row = array(
-      'pid' => $pid . "." . $dsid, 
+      'pid' => $pid . "." . $dsid,
       'user' => $responsibility,
       'time' => array($edited_date),
       );
