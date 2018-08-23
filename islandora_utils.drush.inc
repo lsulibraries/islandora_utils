@@ -261,7 +261,7 @@ function drush_islandora_utils_ocr_consolidate() {
   }
   if(isset($pids)){
     foreach($pids as $singlepid) {
-      drush_print($singlepid);
+      drush_log($singlepid . ' now has a consolidated ocr datastream' , success);
       consolidate_ocr($singlepid);
     }
   }
