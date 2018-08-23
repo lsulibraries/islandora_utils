@@ -259,13 +259,13 @@ function drush_islandora_utils_ocr_consolidate() {
   }
   if(isset($pids)){
     foreach($pids as $singlepid) {
-      drush_print_r($singlepid);
+      drush_print($singlepid);
       consolidate_ocr($singlepid);
     }
   }
   else{
     $pid = drush_get_option('pid', FALSE);
-    drush_print_r($pid);
+    drush_print($pid);
     consolidate_ocr($pid);
   }
 }
