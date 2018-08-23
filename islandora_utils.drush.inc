@@ -244,9 +244,8 @@ function islandora_utils_drush_command() {
 }
 
 function drush_islandora_utils_ocr_consolidate() {
-  $pid = drush_get_option('pid',FALSE);
-  $pidlist =drush_get_option('pidlist',FALSE);
-
+  $pid = drush_get_option('pid', FALSE);
+  $pidlist =drush_get_option('pidlist', FALSE);
   if ($pid && $pidlist) {
     throw new Exception("'pid' and 'pidlist' are mutually exclusive options.");
   }
@@ -257,16 +256,14 @@ function drush_islandora_utils_ocr_consolidate() {
     $pidlist = trim(file_get_contents($pidlist));
     $pids = explode(',', $pidlist);
   }
+  else{
+    $pids = [$pid];
+  }
   if(isset($pids)){
     foreach($pids as $singlepid) {
       drush_print($singlepid);
       consolidate_ocr($singlepid);
     }
-  }
-  else{
-    $pid = drush_get_option('pid', FALSE);
-    drush_print($pid);
-    consolidate_ocr($pid);
   }
 }
 
