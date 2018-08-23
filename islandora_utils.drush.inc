@@ -265,12 +265,11 @@ function drush_islandora_utils_ocr_consolidate() {
     foreach ($pages_ocr as $key => $string) {
       $big_string .= $string;
     }
-    $datastream = $parent_obj->constructDatastream('OCR');
+    $datastream =isset($parent_obj['OCR']) ? $parent_obj['OCR'] : $parent_obj->constructDatastream('OCR');
     $datastream->label = 'Consolidated OCR';
     $datastream->mimeType = 'text/plain';
     $datastream->setContentFromString($big_string);
-    drush_print_r($datastream);
-    //$parent_obj->ingestDatastream($datastream);
+    $parent_obj->ingestDatastream($datastream);
   // }
 }
 
