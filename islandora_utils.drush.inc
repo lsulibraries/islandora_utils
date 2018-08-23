@@ -224,18 +224,18 @@ function islandora_utils_drush_command() {
   $items['islandora-utils-ocr-consolidate'] = array(
     'description' => dt('Consolidate multiple ocr files, for newspapers or books.'),
     'examples' => array('drush islandora-utils-ocr-consolidate -u 1 --pid'),
-    'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
       'islandora_paged_content',
     ),
     'options' => array(
       'pid' => array(
-        'description' => dt('single pid.'),
-        'required' => TRUE,
+        'description' => dt('single pid of parent with pages.'),
+        'required' => FALSE,
       ),
-      'parentcoll' => array(
-        'description' => dt('single pid of parent.'),
+      'pidlist' => array(
+        'description' => dt('csv list of pids that contain pages (a series of newspaper issues etc).'),
         'required' => FALSE,
       ),
     ),
@@ -244,33 +244,55 @@ function islandora_utils_drush_command() {
 }
 
 function drush_islandora_utils_ocr_consolidate() {
+  $pid = drush_get_option('pid',FALSE);
+  $pidlist =drush_get_option('pidlist',FALSE);
 
+  if ($pid && $pidlist) {
+    throw new Exception("'pid' and 'pidlist' are mutually exclusive options.");
+  }
+  elseif (!$pid && !$pidlist) {
+    throw new Exception('One of the options [pid,pidlist] is required.');
+  }
+  elseif (!$pid) {
+    $pidlist = trim(file_get_contents($pidlist));
+    $pids = explode(',', $pidlist);
+  }
+  if(isset($pids)){
+    foreach($pids as $singlepid) {
+      drush_print_r($singlepid);
+      consolidate_ocr($singlepid);
+    }
+  }
+  else{
+    $pid = drush_get_option('pid', FALSE);
+    drush_print_r($pid);
+    consolidate_ocr($pid);
+  }
+}
+
+function consolidate_ocr($pid) {
   module_load_include('inc','islandora_utils','includes/util');
   module_load_include('inc','islandora_paged_content', 'includes/utilities');
-  $pid = drush_get_option('pid', FALSE);
   $pages_ocr = array();
-  // foreach($pidlist as $pid) {
-
-    $path = "tmp/$pid" ;
-    $parent_obj = islandora_object_load($pid);
-    $pages = islandora_paged_content_get_pages_ri($parent_obj);
-    foreach($pages as $page) {
-      $page_pid = $page['pid'];
-      $page_obj = islandora_object_load($page_pid);
-      if(isset($page_obj['OCR'])) {
-        $pages_ocr[] = $page_obj['OCR']->content;
-      }
+  $path = "tmp/$pid" ;
+  $parent_obj = islandora_object_load($pid);
+  $pages = islandora_paged_content_get_pages_ri($parent_obj);
+  foreach($pages as $page) {
+    $page_pid = $page['pid'];
+    $page_obj = islandora_object_load($page_pid);
+    if(isset($page_obj['OCR'])) {
+      $pages_ocr[] = $page_obj['OCR']->content;
     }
-    $big_string = '';
-    foreach ($pages_ocr as $key => $string) {
-      $big_string .= $string;
-    }
-    $datastream =isset($parent_obj['OCR']) ? $parent_obj['OCR'] : $parent_obj->constructDatastream('OCR');
-    $datastream->label = 'Consolidated OCR';
-    $datastream->mimeType = 'text/plain';
-    $datastream->setContentFromString($big_string);
-    $parent_obj->ingestDatastream($datastream);
-  // }
+  }
+  $big_string = '';
+  foreach ($pages_ocr as $key => $string) {
+    $big_string .= $string;
+  }
+  $datastream =isset($parent_obj['OCR']) ? $parent_obj['OCR'] : $parent_obj->constructDatastream('OCR');
+  $datastream->label = 'Consolidated OCR';
+  $datastream->mimeType = 'text/plain';
+  $datastream->setContentFromString($big_string);
+  $parent_obj->ingestDatastream($datastream);
 }
 
 function drush_islandora_utils_ingest_item() {
