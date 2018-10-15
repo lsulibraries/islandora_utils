@@ -36,7 +36,7 @@ function csv_format_pid_list($pids){
 }
 
 /**
- * 
+ *
  * @param array $pids
  */
 function output_result($pids){
