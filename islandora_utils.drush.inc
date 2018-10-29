@@ -313,7 +313,7 @@ function drush_islandora_utils_index_list() {
     throw new Exception('One of the options [infile,list] is required.');
   }
   elseif (!$list) {
-    $list = file_get_contents($infile);
+    $list = trim(file_get_contents($infile));
   }
   $pids = explode(',', $list);
   index_pids($pids);
@@ -352,47 +352,106 @@ function drush_islandora_utils_get_objects_missing_dsid() {
   }
 }
 
+
 function drush_islandora_utils_get_objects_changed_dsid(){
   require_once('includes/util.inc');
   module_load_include('inc', 'islandora', 'includes/datastream.version');
   $coll = drush_get_option('collection');
   $dsid = drush_get_option('dsid');
-  $pids = get_collection_members($coll);
   $outfile = drush_get_option('outfile');
+  $pids = get_collection_members($coll);
   drush_log(sprintf("found %s pids", count($pids)), LogLevel::DEBUG);
-  foreach($pids as $pid){
-    drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
-    $object = islandora_object_load($pid);
-    $repo = $object->repository;
-    $api_m = $repo->api->m;
-    $data = islandora_get_audit_trail($pid,$dsid);
-
-    if(!empty($data) && array_key_exists(0, $data) && array_key_exists('responsibility', $data[0])){
-      $whom = $data[0]['responsibility'];
-    }
-    if(isset($object[$dsid])){
-      $hist = $api_m->getDatastreamHistory($pid, $dsid);
-      $when = $hist[0]['dsCreateDate'];
-    }
-    else {
-      drush_log('datastream non-existant', LogLevel::WARNING);
-    }
-    $count = count($hist);
-    if($count > 1){
-      if($outfile){
-        $toFile = 'PID: '.$pid.' , '.'number of versions: '.$count.' at time: '.$when.' by: '.$whom;
-        file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
-      }
-      drush_log("changed $dsid and number of versions for $pid = $count, last changed @ $when , by $whom", LogLevel::WARNING);
-    }
-    elseif($count == 1) {
-      drush_log("Only one version found for $dsid in $pid", LogLevel::DEBUG);
-    }
-    else {
-      drush_log("$dsid NOT FOUND in $pid", LogLevel::ERROR);
+  $pids_histories = array();
+  foreach($pids as $pid) {
+    $pid_history = get_history_of_pid($pid, $dsid);
+    if ($pid_history) {
+      $pids_histories[] = $pid_history;
     }
   }
+  $filtered_histories = filter_unchanged_from_pid_history($pids_histories);
+  if ($outfile) {
+    $toFile = json_encode($filtered_histories);
+    file_put_contents($outfile, $toFile.PHP_EOL , FILE_APPEND );
+  }
+  console_print_results($filtered_histories, $dsid);
 }
+
+
+function get_history_of_pid($pid, $dsid){
+  drush_log(sprintf("checking %s for %s", $dsid, $pid), LogLevel::DEBUG);
+  $islandora_object = islandora_object_load($pid);
+  $datastream = $islandora_object[$dsid];
+  if (!$datastream) {
+    drush_log("$dsid NOT FOUND for $pid", LogLevel::DEBUG);
+    return False;
+  }
+  # $audit_values include item versions that were deleted, etc.
+  # But all $datastream values are active versions.  
+  # So, we loop over the $datastream items, and pull in 
+  # extra information from the matching #audit_values item.
+  # Date of creation is treated as a unique id for matching items.
+  $rows = array();
+  $audit_values = islandora_get_audit_trail($pid, $dsid);
+  foreach ($datastream as $version => $datastream_version) {
+    $responsibility = $islandora_object->owner;
+    // finds a better author name from audit_value, if possible.
+    foreach ($audit_values as $audit_value) {
+      if ($audit_value['date'] == $datastream_version->createdDate) {
+        $responsibility = strval($audit_value['responsibility']);
+        break;
+      }
+    }
+    $edited_date = $datastream_version->createdDate->format(DATE_RFC850);
+    foreach ($rows as &$item) {
+      if (strval($item['user']) == strval($responsibility)) {
+        array_push($item['time'], $edited_date);
+        continue 2;
+      }
+    }
+    $row = array(
+      'pid' => $pid . "." . $dsid, 
+      'user' => $responsibility,
+      'time' => array($edited_date),
+      );
+    $rows[] = $row;
+  }
+  return $rows;
+}
+
+
+function filter_unchanged_from_pid_history($pids_histories){
+  $retained_history = array();
+  foreach ($pids_histories as $pid_history) {
+    if (count($pid_history) > 1) {
+      $retained_history[] = $pid_history;
+      continue;
+    }
+    foreach ($pid_history as $event) {
+      if (count($event['time']) > 1) {
+        $retained_history[] = $pid_history;
+        continue 2;
+      }
+    }
+  }
+  return $retained_history;
+}
+
+
+function console_print_results($filtered_histories, $dsid){
+  foreach ($filtered_histories as $counter=>$per_pid) {
+    foreach ($per_pid as $per_editor) {
+      $editor = $per_editor['user'];
+      $pid = $per_editor['pid'];
+      $times_array = $per_editor['time'];
+      $times_count = count($times_array);
+      $times_string = implode('; ', $times_array);
+      drush_log("$dsid for $pid has $times_count changes by $editor on $times_string", LogLevel::WARNING);
+    }
+    $editors_count = count($per_pid);
+    drush_log("$dsid for $pid has $editors_count editors", LogLevel::WARNING);
+  }
+}
+
 
 function drush_islandora_utils_create_collection() {
   require_once('includes/util.inc');
