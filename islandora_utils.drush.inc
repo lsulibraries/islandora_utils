@@ -171,7 +171,7 @@ function islandora_utils_drush_command() {
   );
   $items['islandora-utils-set-state'] = array(
     'description' => dt('Set the fedora object state for a PID or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
-    'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid'),
+    'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid --allpids=Active or Inactive'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
@@ -189,6 +189,10 @@ function islandora_utils_drush_command() {
         'description' => dt('Writable path for error logging.'),
         'required' => FALSE,
       ),
+      'allpids' => array(
+        'description' => dt('Set active for all the inactive pids and Inactive for active pids'),
+        'required' => FALSE,
+      )
     ),
     'arguments' => array(
       'state' => 'inactive or active',
@@ -338,7 +342,8 @@ EOL;
 function drush_islandora_utils_set_state($state) {
   $namespace = drush_get_option('namespace');
   $pid = drush_get_option('pid');
-  if(!$namespace && !$pid) {
+  $allpids = drush_get_option('allpids');
+  if(!$namespace && !$pid && !$allpids) {
     drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
     return;
   }
@@ -352,8 +357,26 @@ function drush_islandora_utils_set_state($state) {
   if(isset($namespace)) {
     $list = array_merge($list, get_namespace_members($namespace));
   }
+  if(isset($allpids)) {
+$query = <<<EOQ
+SELECT ?obj
+FROM <#ri>
+WHERE { ?obj <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#$allpids>
+}
+EOQ;
+    $tuque = islandora_get_tuque_connection();
+    $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+    $cleanpids = array();
+    // print_r($pids);
+    foreach ($pids as $pid) {
+      $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
+    }
+    $list = array_merge($list, $cleanpids);
+  }
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
+    // print_r($data);
+    // return;
     $object = islandora_object_load($pid);
     if(!$object) {
       drush_log("No object found: $pid.", 'warning');
@@ -371,6 +394,7 @@ function drush_islandora_utils_set_state($state) {
     }
   }
 }
+
 
 function drush_islandora_utils_get_pids_for_collection() {
   require_once('includes/util.inc');
