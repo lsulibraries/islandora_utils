@@ -244,7 +244,76 @@ function islandora_utils_drush_command() {
       ),
     ),
   );
+  $items['islandora-utils-cpd-rels'] = array(
+    'description' => dt('Adding collectionmembership info to cpd'),
+    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid --allcpds'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_paged_content',
+    ),
+    'options' => array(
+      'pid' => array(
+        'description' => dt('single pid of parent with pages.'),
+        'required' => FALSE,
+      ),
+      'collection' => array(
+        'description' => dt('Addding collection memberships information to collection compounds'),
+        'required' => FALSE,
+      ),
+      'allcpds' => array(
+        'description' => dt('Adding collection membership information to all compounds'),
+        'required' => FALSE,
+      )
+    ),
+  );
   return $items;
+}
+
+function drush_islandora_utils_cpd_rels(){
+  $pid = drush_get_option('pid');
+  $allcpds = drush_get_option('allcpds');
+  $cpds = drush_get_option('cpds');
+  $tuque = islandora_get_tuque_connection();
+  if($allcpds) {
+$query = <<<EOQ
+SELECT ?parent
+FROM <#ri>
+WHERE {?parent <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:compoundCModel>
+}
+EOQ;
+$parent =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+  }
+  if($pid) {
+$query = <<<EOQ
+SELECT  ?child
+FROM <#ri>
+WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid>
+}
+EOQ;
+    $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+$query = <<<EOQ
+SELECT ?parent_coll
+FROM <#ri>
+WHERE {<info:fedora/$pid> <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> ?parent_coll
+}
+EOQ;
+    $parent_coll_cpds = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+    foreach ($children as $cpd_child_pid) {
+      $obj = islandora_object_load($cpd_child_pid['child']['value']);
+      $rels = $obj['RELS-EXT'];
+      $content = $rels->content;
+      $rels_xml = simplexml_load_string($content);
+      $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
+      $node[0]->addChild('info:fedora/fedora-system:def/relations-external#isMemberOfCollection', $parent_coll_cpds[0]['parent_coll']['value']);
+      $update = (string) $rels_xml->asXML();
+      print(gettype($update));
+      $rels->setContentFromString($update);
+    }
+  }
+  if ($collection) {
+
+  }
 }
 
 function drush_islandora_utils_ocr_consolidate() {
@@ -350,7 +419,6 @@ function drush_islandora_utils_set_state($state) {
   $log = drush_get_option('logfile', FALSE);
   $errors = array();
   $list = array();
-
   if (isset($pid)){
     $list = array_merge($list, array(array('pid' => array('value' => $pid))));
   }
@@ -367,7 +435,6 @@ EOQ;
     $tuque = islandora_get_tuque_connection();
     $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
     $cleanpids = array();
-    // print_r($pids);
     foreach ($pids as $pid) {
       $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
     }
@@ -375,8 +442,6 @@ EOQ;
   }
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
-    // print_r($data);
-    // return;
     $object = islandora_object_load($pid);
     if(!$object) {
       drush_log("No object found: $pid.", 'warning');
@@ -386,7 +451,6 @@ EOQ;
       $object->state = $state;
       drush_log("Set state for $pid to $state.", 'success');
     }
-
     if($log && !empty($errors)) {
       $logdata = "No object found for the following.\n" . implode("\n",$errors);
       file_put_contents($log, $logdata);
