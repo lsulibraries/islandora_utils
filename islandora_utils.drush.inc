@@ -194,7 +194,130 @@ function islandora_utils_drush_command() {
       'state' => 'inactive or active',
     ),
   );
+  $items['islandora-utils-ingest-item'] = array(
+    'description' => "Ingest an item of arbitrary type.",
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => ['islandora'],
+    'options' => [
+      'cmodel' => [
+        'description' => dt('Model to create'),
+        'required' => TRUE,
+        ],
+      'collection' => [
+        'description' => dt('Collection to which this thing should belong.'),
+        'required' => TRUE,
+        ],
+      'pid' => [
+        'description' => 'pid to assign',
+        'required' => TRUE,
+        ],
+      'title' => [
+        'description' => dt('Title for the new item.'),
+        'requiered' => TRUE,
+        ],
+      'date' => [
+        'description' => 'Required for items of type newspaper.',
+        'required' => FALSE,
+        ],
+      ],
+  );
+  $items['islandora-utils-ocr-consolidate'] = array(
+    'description' => dt('Consolidate multiple ocr files, for newspapers or books.'),
+    'examples' => array('drush islandora-utils-ocr-consolidate -u 1 --pid'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => array(
+      'islandora',
+      'islandora_paged_content',
+    ),
+    'options' => array(
+      'pid' => array(
+        'description' => dt('single pid of parent with pages.'),
+        'required' => FALSE,
+      ),
+      'pidlist' => array(
+        'description' => dt('csv list of pids that contain pages (a series of newspaper issues etc).'),
+        'required' => FALSE,
+      ),
+    ),
+  );
   return $items;
+}
+
+function drush_islandora_utils_ocr_consolidate() {
+  $pid = drush_get_option('pid', FALSE);
+  $pidlist =drush_get_option('pidlist', FALSE);
+  if ($pid && $pidlist) {
+    throw new Exception("'pid' and 'pidlist' are mutually exclusive options.");
+  }
+  elseif (!$pid && !$pidlist) {
+    throw new Exception('One of the options [pid,pidlist] is required.');
+  }
+  elseif (!$pid) {
+    $pidlist = trim(file_get_contents($pidlist));
+    $pids = explode(',', $pidlist);
+  }
+  else{
+    $pids = [$pid];
+  }
+  if(isset($pids)){
+    foreach($pids as $singlepid) {
+      drush_log($singlepid . ' now has a consolidated ocr datastream' , success);
+      consolidate_ocr($singlepid);
+    }
+  }
+}
+
+function consolidate_ocr($pid) {
+  module_load_include('inc','islandora_utils','includes/util');
+  module_load_include('inc','islandora_paged_content', 'includes/utilities');
+  $pages_ocr = array();
+  $path = "tmp/$pid" ;
+  $parent_obj = islandora_object_load($pid);
+  $pages = islandora_paged_content_get_pages_ri($parent_obj);
+  foreach($pages as $page) {
+    $page_pid = $page['pid'];
+    $page_obj = islandora_object_load($page_pid);
+    if(isset($page_obj['OCR'])) {
+      $pages_ocr[] = $page_obj['OCR']->content;
+    }
+  }
+  $big_string = '';
+  foreach ($pages_ocr as $key => $string) {
+    $big_string .= $string;
+  }
+  $datastream =isset($parent_obj['OCR']) ? $parent_obj['OCR'] : $parent_obj->constructDatastream('OCR');
+  $datastream->label = 'Consolidated OCR';
+  $datastream->mimeType = 'text/plain';
+  $datastream->setContentFromString($big_string);
+  $parent_obj->ingestDatastream($datastream);
+}
+
+function drush_islandora_utils_ingest_item() {
+  module_load_include('inc', 'islandora_utils', 'includes/util');
+  $options = ['cmodel', 'collection', 'pid', 'title', 'date'];
+  $params = [];
+  foreach($options as $option) {
+    $value = drush_get_option($option, FALSE);
+    $params[$option] = $value;
+  }
+  extract($params);
+
+  try {
+    $tuque = new IslandoraTuque();
+    $repository = $tuque->repository;
+    $object = $repository->constructObject($pid);
+    $object->label = $title;
+    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection);
+    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $cmodel);
+    $ds_mods = $object->constructDatastream('MODS');
+    $mods_xml = islandora_utils_get_mods($params);
+    $ds_mods->setContentFromString($mods_xml);
+    $object->ingestDatastream($ds_mods);
+    $repository->ingestObject($object);
+  }
+  catch(Exception $e) {
+    throw new Exception($e);
+  }
 }
 
 function get_namespace_members($namespace) {
@@ -386,8 +509,8 @@ function get_history_of_pid($pid, $dsid){
     return False;
   }
   # $audit_values include item versions that were deleted, etc.
-  # But all $datastream values are active versions.  
-  # So, we loop over the $datastream items, and pull in 
+  # But all $datastream values are active versions.
+  # So, we loop over the $datastream items, and pull in
   # extra information from the matching #audit_values item.
   # Date of creation is treated as a unique id for matching items.
   $rows = array();
@@ -409,7 +532,7 @@ function get_history_of_pid($pid, $dsid){
       }
     }
     $row = array(
-      'pid' => $pid . "." . $dsid, 
+      'pid' => $pid . "." . $dsid,
       'user' => $responsibility,
       'time' => array($edited_date),
       );
