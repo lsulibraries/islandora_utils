@@ -308,9 +308,10 @@ EOQ;
         $content = $rels->content;
         $rels_xml = simplexml_load_string($content);
         $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-        $isMem = $node[0]->addChild('fedora:isMemberOfCollection');
-        $isMem->addAttribute('rdf:resource', "info:fedora/$collection");
+        $isMem = $node[0]->addChild('fedora:isMemberOfCollection', '', 'info:fedora/fedora-system:def/relations-external#');
+        $isMem->addAttribute('rdf:resource', "info:fedora/$collection", 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
         $update = (string) $rels_xml->asXML();
+        print($update);
         $rels->setContentFromString($update);
       }
     }
@@ -341,9 +342,10 @@ EOQ;
       $content = $rels->content;
       $rels_xml = simplexml_load_string($content);
       $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-      $isMem = $node[0]->addChild('fedora:isMemberOfCollection');
-      $isMem->addAttribute('rdf:resource', "info:fedora/$parent");
+      $isMem = $node[0]->addChild('fedora:isMemberOfCollection', '', 'info:fedora/fedora-system:def/relations-external#');
+      $isMem->addAttribute('rdf:resource', "info:fedora/$parent", 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
       $update = (string) $rels_xml->asXML();
+      print($update);
       $rels->setContentFromString($update);
     }
   }
