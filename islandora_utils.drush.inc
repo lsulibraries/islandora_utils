@@ -245,23 +245,23 @@ function islandora_utils_drush_command() {
     ),
   );
   $items['islandora-utils-cpd-rels'] = array(
-    'description' => dt('Adding collectionmembership info to cpd'),
-    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid --allcpds'),
+    'description' => dt('Adds collection membership to compound children'),
+    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid=cpd_parent:pid', 'drush islandora-utils-cpd-rels -u 1 --allcpds', 'drush islandora-utils-cpd-rels -u 1 --collection=collection:pid'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
     ),
     'options' => array(
       'pid' => array(
-        'description' => dt('single pid of parent with pages.'),
+        'description' => dt('Adds collection membership to the children of a single compound parent.'),
         'required' => FALSE,
       ),
       'collection' => array(
-        'description' => dt('Addding collection memberships information to collection compounds'),
+        'description' => dt('Adds collection membership to all compound children in a collection'),
         'required' => FALSE,
       ),
       'allcpds' => array(
-        'description' => dt('Adding collection membership information to all compounds'),
+        'description' => dt('Adds collection membership to all compound children available'),
         'required' => FALSE,
       )
     ),
@@ -272,7 +272,19 @@ function islandora_utils_drush_command() {
 function drush_islandora_utils_cpd_rels(){
   $pid = drush_get_option('pid');
   $allcpds = drush_get_option('allcpds');
-  $cpds = drush_get_option('cpds');
+  $cpds = drush_get_option('collection');
+  $one_only = array($pid, $allcpds, $cpds);
+  $len = array();
+  foreach ($one_only as $one){
+    if (isset($one)){
+      $len[] = $one;
+    }
+  }
+  if (sizeof($len) > 1){
+    drush_log("Choose only one option at a time. Exiting.", 'warning');
+    return;
+  }
+
   $tuque = islandora_get_tuque_connection();
   if($allcpds) {
 
