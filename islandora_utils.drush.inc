@@ -246,7 +246,7 @@ function islandora_utils_drush_command() {
   );
   $items['islandora-utils-cpd-rels'] = array(
     'description' => dt('Adds collection membership to compound children'),
-    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid=cpd_parent:pid', 'drush islandora-utils-cpd-rels -u 1 --allcpds', 'drush islandora-utils-cpd-rels -u 1 --collection=collection:pid'),
+    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid=cpd_parent:pid', 'drush islandora-utils-cpd-rels -u 1 --collection=collection:pid'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
@@ -260,10 +260,6 @@ function islandora_utils_drush_command() {
         'description' => dt('Adds collection membership to all compound children in a collection'),
         'required' => FALSE,
       ),
-      'allcpds' => array(
-        'description' => dt('Adds collection membership to all compound children available'),
-        'required' => FALSE,
-      )
     ),
   );
   return $items;
@@ -271,7 +267,6 @@ function islandora_utils_drush_command() {
 
 function drush_islandora_utils_cpd_rels(){
   $pid = drush_get_option('pid');
-  $allcpds = drush_get_option('allcpds');
   $collection = drush_get_option('collection');
   $one_only = array($pid, $allcpds, $collection);
   $len = array();
@@ -285,17 +280,6 @@ function drush_islandora_utils_cpd_rels(){
     return;
   }
   $tuque = islandora_get_tuque_connection();
-  if ($allcpds) {
-
-$query = <<<EOQ
-SELECT ?parent
-FROM <#ri>
-WHERE {?parent <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:compoundCModel>
-}
-EOQ;
-
-    $parent =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-  }
 
   if ($collection) {
 
@@ -324,7 +308,8 @@ EOQ;
         $content = $rels->content;
         $rels_xml = simplexml_load_string($content);
         $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-        $node[0]->addChild('fedora:isMemberOfCollection', $collection);
+        $isMem = $node[0]->addChild('fedora:isMemberOfCollection');
+        $isMem->addAttribute('rdf:resource', "info:fedora/$collection");
         $update = (string) $rels_xml->asXML();
         $rels->setContentFromString($update);
       }
@@ -341,7 +326,6 @@ WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf>
 EOQ;
 
     $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-
 $query = <<<EOQ
 SELECT ?parent_coll
 FROM <#ri>
@@ -351,12 +335,14 @@ EOQ;
 
     $parent_coll_cpds = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
     foreach ($children as $cpd_child_pid) {
+      $parent = $parent_coll_cpds[0]['parent_coll']['value'];
       $obj = islandora_object_load($cpd_child_pid['child']['value']);
       $rels = $obj['RELS-EXT'];
       $content = $rels->content;
       $rels_xml = simplexml_load_string($content);
       $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-      $node[0]->addChild('fedora:isMemberOfCollection', $parent_coll_cpds[0]['parent_coll']['value']);
+      $isMem = $node[0]->addChild('fedora:isMemberOfCollection');
+      $isMem->addAttribute('rdf:resource', "info:fedora/$parent");
       $update = (string) $rels_xml->asXML();
       $rels->setContentFromString($update);
     }
