@@ -264,86 +264,65 @@ function islandora_utils_drush_command() {
 function drush_islandora_utils_cpd_rels(){
   $pid = drush_get_option('pid');
   $collection = drush_get_option('collection');
-  $one_only = array($pid, $allcpds, $collection);
-  $len = array();
-  foreach ($one_only as $one) {
-    if (isset($one)){
-      $len[] = $one;
-    }
-  }
-  if (sizeof($len) > 1) {
-    drush_log("Choose only one option at a time. Exiting.", 'warning');
-    return;
-  }
-  $tuque = islandora_get_tuque_connection();
+  if (isset($pid) xor isset($collection)  ) {
+    $tuque = islandora_get_tuque_connection();
 
-  if ($collection) {
+    if ($collection) {
 
 $query = <<<EOQ
 SELECT ?parents
 FROM <#ri>
 WHERE {?parents <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:compoundCModel> .
-       ?parents <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> <info:fedora/$collection>
-}
+       ?parents <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> <info:fedora/$collection>}
 EOQ;
 
-  $pids = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-  foreach ($pids as $pid) {
-  $pid = $pid['parents']['value'];
+      $pids = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+      foreach ($pids as $pid) {
+        $pid = $pid['parents']['value'];
+
 $query = <<<EOQ
 SELECT  ?child
 FROM <#ri>
-WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid>
-}
+WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid>}
+EOQ;
+
+        $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+        foreach ($children as $cpd_child_pid) {
+          $obj = islandora_object_load($cpd_child_pid['child']['value']);
+          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection);
+          drush_log("$obj->id isMemberOfCollection $collection relationship added", 'success');
+        }
+      }
+    }
+
+    if ($pid) {
+
+$query = <<<EOQ
+SELECT  ?child
+FROM <#ri>
+WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid>}
 EOQ;
 
       $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-      foreach ($children as $cpd_child_pid) {
-        $obj = islandora_object_load($cpd_child_pid['child']['value']);
-        $rels = $obj['RELS-EXT'];
-        $content = $rels->content;
-        $rels_xml = simplexml_load_string($content);
-        $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-        $isMem = $node[0]->addChild('fedora:isMemberOfCollection', '', 'info:fedora/fedora-system:def/relations-external#');
-        $isMem->addAttribute('rdf:resource', "info:fedora/$collection", 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-        $update = (string) $rels_xml->asXML();
-        print($update);
-        $rels->setContentFromString($update);
-      }
-    }
-  }
 
-  if ($pid) {
-
-$query = <<<EOQ
-SELECT  ?child
-FROM <#ri>
-WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid>
-}
-EOQ;
-
-    $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
 $query = <<<EOQ
 SELECT ?parent_coll
 FROM <#ri>
-WHERE {<info:fedora/$pid> <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> ?parent_coll
-}
+WHERE {<info:fedora/$pid> <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> ?parent_coll}
 EOQ;
 
-    $parent_coll_cpds = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-    foreach ($children as $cpd_child_pid) {
-      $parent = $parent_coll_cpds[0]['parent_coll']['value'];
-      $obj = islandora_object_load($cpd_child_pid['child']['value']);
-      $rels = $obj['RELS-EXT'];
-      $content = $rels->content;
-      $rels_xml = simplexml_load_string($content);
-      $node = $rels_xml->xpath('/rdf:RDF/rdf:Description');
-      $isMem = $node[0]->addChild('fedora:isMemberOfCollection', '', 'info:fedora/fedora-system:def/relations-external#');
-      $isMem->addAttribute('rdf:resource', "info:fedora/$parent", 'http://www.w3.org/1999/02/22-rdf-syntax-ns#');
-      $update = (string) $rels_xml->asXML();
-      print($update);
-      $rels->setContentFromString($update);
+      $parent_coll_cpds = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+      foreach ($children as $cpd_child_pid) {
+        $parent = $parent_coll_cpds[0]['parent_coll']['value'];
+        $obj = islandora_object_load($cpd_child_pid['child']['value']);
+        $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $parent);
+        drush_log("$obj->id isMemberOfCollection $parent relationship added", 'success');
+      }
     }
+  }
+  else {
+    drush_log("Choose only one option at a time. Exiting.", 'warning');
+    return;
   }
 }
 
