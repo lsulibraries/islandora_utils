@@ -421,7 +421,6 @@ EOL;
 function drush_islandora_utils_set_state($state) {
   $namespace = drush_get_option('namespace');
   $pid = drush_get_option('pid');
-  $allpids = drush_get_option('allpids');
   if(!$namespace && !$pid) {
     drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
     return;
@@ -429,6 +428,7 @@ function drush_islandora_utils_set_state($state) {
   $log = drush_get_option('logfile', FALSE);
   $errors = array();
   $list = array();
+
   if (isset($pid)){
     $list = array_merge($list, array(array('pid' => array('value' => $pid))));
   }
@@ -446,6 +446,7 @@ function drush_islandora_utils_set_state($state) {
       $object->state = $state;
       drush_log("Set state for $pid to $state.", 'success');
     }
+
     if($log && !empty($errors)) {
       $logdata = "No object found for the following.\n" . implode("\n",$errors);
       file_put_contents($log, $logdata);
@@ -453,7 +454,6 @@ function drush_islandora_utils_set_state($state) {
     }
   }
 }
-
 
 function drush_islandora_utils_get_pids_for_collection() {
   require_once('includes/util.inc');
