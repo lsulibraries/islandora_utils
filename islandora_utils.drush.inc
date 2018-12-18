@@ -422,7 +422,7 @@ function drush_islandora_utils_set_state($state) {
   $namespace = drush_get_option('namespace');
   $pid = drush_get_option('pid');
   $allpids = drush_get_option('allpids');
-  if(!$namespace && !$pid && !$allpids) {
+  if(!$namespace && !$pid) {
     drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
     return;
   }
@@ -434,21 +434,6 @@ function drush_islandora_utils_set_state($state) {
   }
   if(isset($namespace)) {
     $list = array_merge($list, get_namespace_members($namespace));
-  }
-  if(isset($allpids)) {
-$query = <<<EOQ
-SELECT ?obj
-FROM <#ri>
-WHERE { ?obj <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#$allpids>
-}
-EOQ;
-    $tuque = islandora_get_tuque_connection();
-    $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-    $cleanpids = array();
-    foreach ($pids as $pid) {
-      $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
-    }
-    $list = array_merge($list, $cleanpids);
   }
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
