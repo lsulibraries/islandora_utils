@@ -170,29 +170,25 @@ function islandora_utils_drush_command() {
     ),
   );
   $items['islandora-utils-set-state'] = array(
-    'description' => dt('Set the fedora object state for a PID or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
-    'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid --allpids=Active or Inactive'),
+    'description' => dt('Set the fedora object state for a given scope (pid, namespace or all pids), state is Active or Inactive.'),
+    'examples' => array('drush islandora-utils-set-state --scope=pid --target=islandora:pid --logfile=/tpm/log.txt Active','drush islandora-utils-set-state --scope=namespace --target=some-namespace Inactive', 'drush islandora-utils-set-state --scope=all Active'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
     ),
     'options' => array(
-      'namespace' => array(
-        'description' => dt('namespace prefix to look for.'),
-        'required' => FALSE,
+      'scope' => array(
+        'description' => dt('either pid, namespace or all.'),
+        'required' => TRUE,
       ),
-      'pid' => array(
-        'description' => dt('PID to set state for.'),
+      'target' => array(
+        'description' => dt('either a pid or a namespace to target.'),
         'required' => FALSE,
       ),
       'logfile' => array(
         'description' => dt('Writable path for error logging.'),
         'required' => FALSE,
       ),
-      'allpids' => array(
-        'description' => dt('Set active for all the inactive pids and Inactive for active pids'),
-        'required' => FALSE,
-      )
     ),
     'arguments' => array(
       'state' => 'inactive or active',
@@ -340,38 +336,35 @@ EOL;
 }
 
 function drush_islandora_utils_set_state($state) {
-  $namespace = drush_get_option('namespace');
-  $pid = drush_get_option('pid');
-  $allpids = drush_get_option('allpids');
-  if(!$namespace && !$pid && !$allpids) {
-    drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
-    return;
-  }
+  $scope = drush_get_option('scope');
+  $target = drush_get_option('target');
   $log = drush_get_option('logfile', FALSE);
   $errors = array();
   $list = array();
+  switch ($scope) {
+    case 'pid':
+      $list = array_merge($list, array(array('pid' => array('value' => $pid))));
+      break;
+    case 'namespace':
+      $list = array_merge($list, get_namespace_members($namespace));
+      break;
+    case 'all':
 
-  if (isset($pid)){
-    $list = array_merge($list, array(array('pid' => array('value' => $pid))));
-  }
-  if(isset($namespace)) {
-    $list = array_merge($list, get_namespace_members($namespace));
-  }
-  if(isset($allpids)) {
 $query = <<<EOQ
 SELECT ?obj
 FROM <#ri>
 WHERE { ?obj <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#$allpids>
 }
 EOQ;
-    $tuque = islandora_get_tuque_connection();
-    $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
-    $cleanpids = array();
-    foreach ($pids as $pid) {
-      $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
+
+      $tuque = islandora_get_tuque_connection();
+      $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+      $cleanpids = array();
+      foreach ($pids as $pid) {
+        $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
+      }
+      $list = array_merge($list, $cleanpids);
     }
-    $list = array_merge($list, $cleanpids);
-  }
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
     $object = islandora_object_load($pid);
