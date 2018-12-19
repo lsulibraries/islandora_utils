@@ -343,17 +343,18 @@ function drush_islandora_utils_set_state($state) {
   $list = array();
   switch ($scope) {
     case 'pid':
-      $list = array_merge($list, array(array('pid' => array('value' => $pid))));
+      $list = array_merge($list, array(array('pid' => array('value' => $target))));
       break;
     case 'namespace':
-      $list = array_merge($list, get_namespace_members($namespace));
+      $list = array_merge($list, get_namespace_members($target));
       break;
     case 'all':
+      $opposite = $state == 'active' ? 'inactive' : 'active';
 
 $query = <<<EOQ
 SELECT ?obj
 FROM <#ri>
-WHERE { ?obj <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#$allpids>
+WHERE { ?obj <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#$opposite>
 }
 EOQ;
 
@@ -364,7 +365,9 @@ EOQ;
         $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
       }
       $list = array_merge($list, $cleanpids);
+      break;
     }
+
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
     $object = islandora_object_load($pid);
