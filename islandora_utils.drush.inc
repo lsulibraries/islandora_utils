@@ -171,7 +171,7 @@ function islandora_utils_drush_command() {
   );
   $items['islandora-utils-set-state'] = array(
     'description' => dt('Set the fedora object state for a PID or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
-    'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid --allpids=Active or Inactive'),
+    'examples' => array('drush islandora-utils-set-state --namespace=my --pid=my:pid --allpids=Active or Inactive'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
       'islandora',
