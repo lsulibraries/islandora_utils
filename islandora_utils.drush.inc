@@ -367,7 +367,6 @@ EOQ;
     $tuque = islandora_get_tuque_connection();
     $pids =  $tuque->repository->ri->sparqlQuery($query, 'unlimited');
     $cleanpids = array();
-    // print_r($pids);
     foreach ($pids as $pid) {
       $cleanpids[] = array('pid' => array('value' => $pid['obj']['value']));
     }
