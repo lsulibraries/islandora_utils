@@ -375,8 +375,6 @@ EOQ;
   }
   foreach ($list as $data) {
     $pid = $data['pid']['value'];
-    // print_r($data);
-    // return;
     $object = islandora_object_load($pid);
     if(!$object) {
       drush_log("No object found: $pid.", 'warning');
