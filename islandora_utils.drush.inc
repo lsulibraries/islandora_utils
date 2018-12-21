@@ -272,19 +272,26 @@ function drush_islandora_utils_cpd_rels(){
 $query = <<<EOQ
 SELECT ?selected
 FROM <#ri>
-WHERE { $parent_statement 
-       $coll_statement }
+WHERE { $parent_statement $coll_statement
+}
 EOQ;
 
     $pids = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
     if ($pid) {
       foreach ($pids as $pid_member) {
         $parent = islandora_object_load($pid);
+        $grand_parent = $parent->getParents();
         $obj = islandora_object_load($pid_member['selected']['value']);
-        $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
-        $grand_parent = $parent->parent;
-        $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
-        drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+        $already = $obj->relationships->get('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection');
+        if ($already) {
+          drush_log("$obj->id isMemberOfCollection $grand_parent already", 'warning');
+        }
+        else {
+          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent[0]);
+          $grand_parent = $parent->parent;
+          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
+         drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+        }
       }
     }
     else {
@@ -301,8 +308,14 @@ EOQ;
         $grand_parent = $collection;
         foreach ($children as $cpd_child_pid) {
           $obj = islandora_object_load($cpd_child_pid['child']['value']);
-          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
-          drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+          $already = $obj->relationships->get('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection');
+          if ($already) {
+            drush_log("$obj->id isMemberOfCollection $grand_parent already", 'warning');
+          }
+          else {
+            $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
+            drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+          }
         }
       }
     }
