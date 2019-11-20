@@ -240,7 +240,90 @@ function islandora_utils_drush_command() {
       ),
     ),
   );
+  $items['islandora-utils-cpd-rels'] = array(
+    'description' => dt('Adds collection membership to compound children'),
+    'examples' => array('drush islandora-utils-cpd-rels -u 1 --pid=cpd_parent:pid', 'drush islandora-utils-cpd-rels -u 1 --collection=collection:pid'),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    'drupal dependencies' => array(
+      'islandora',
+    ),
+    'options' => array(
+      'pid' => array(
+        'description' => dt('Adds collection membership to the children of a single compound parent.'),
+        'required' => FALSE,
+      ),
+      'collection' => array(
+        'description' => dt('Adds collection membership to all compound children in a collection'),
+        'required' => FALSE,
+      ),
+    ),
+  );
   return $items;
+}
+
+function drush_islandora_utils_cpd_rels(){
+  $pid = drush_get_option('pid');
+  $collection = drush_get_option('collection');
+  if (isset($pid) xor isset($collection)  ) {
+    $tuque = islandora_get_tuque_connection();
+    $coll_statement = isset($collection) ? "?selected <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> <info:fedora/$collection>  ." : ''; 
+    $parent_statement = isset($pid) ? "?selected <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$pid> ." : "?selected <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:compoundCModel> .";
+
+$query = <<<EOQ
+SELECT ?selected
+FROM <#ri>
+WHERE { $parent_statement $coll_statement
+}
+EOQ;
+
+    $pids = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+    if ($pid) {
+      foreach ($pids as $pid_member) {
+        $parent = islandora_object_load($pid);
+        $grand_parent = $parent->getParents();
+        $obj = islandora_object_load($pid_member['selected']['value']);
+        $already = $obj->relationships->get('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection');
+        if ($already) {
+          drush_log("$obj->id isMemberOfCollection $grand_parent already", 'warning');
+        }
+        else {
+          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent[0]);
+          $grand_parent = $parent->parent;
+          $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
+         drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+        }
+      }
+    }
+    else {
+      foreach($pids as $pid) {
+        $parent_pid = $pid['selected']['value'];
+
+$query = <<<EOQ
+SELECT  ?child
+FROM <#ri>
+WHERE {?child <info:fedora/fedora-system:def/relations-external#isConstituentOf> <info:fedora/$parent_pid>}
+EOQ;
+
+        $children = $tuque->repository->ri->sparqlQuery($query, 'unlimited');
+        $grand_parent = $collection;
+        foreach ($children as $cpd_child_pid) {
+          $obj = islandora_object_load($cpd_child_pid['child']['value']);
+          $already = $obj->relationships->get('info:fedora/fedora-system:def/relations-external#', 'isMemberOfCollection');
+          if ($already) {
+            drush_log("$obj->id isMemberOfCollection $grand_parent already", 'warning');
+          }
+          else {
+            $obj->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $grant_parent);
+            drush_log("$obj->id isMemberOfCollection $grand_parent relationship added", 'success');
+          }
+        }
+      }
+    }
+  }
+  else {
+    drush_log("Choose only one option at a time. Exiting.", 'warning');
+    return;
+  }
 }
 
 function drush_islandora_utils_ocr_consolidate() {
