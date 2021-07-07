@@ -379,28 +379,26 @@ function drush_islandora_utils_get_pids_for_collection() {
   output_result($pids);
 }
 
-/**
- *
- */
 function drush_islandora_utils_get_cdm_pointers_for_collection() {
   require_once 'includes/util.inc';
-  $pid  = drush_get_option('collection');
+  $coll = drush_get_option('collection');
   $ptrs = drush_get_option('infile', FALSE) ? explode(',', file_get_contents(drush_get_option('infile'))) : FALSE;
   $ptrs = $ptrs ? array_map('trim', $ptrs) : $ptrs;
-  $pids = get_collection_members($pid);
+  $pids = get_collection_members($coll);
   $map  = array();
   $hits = array();
 
   foreach ($pids as $pid) {
-    $obj   = islandora_object_load($pid);
-    $mods  = $obj->getDatastream('MODS')->content;
-    $xml   = simplexml_load_string($mods);
-    $ptr   = $xml->extension->CONTENTdmData->pointer;
-    if ($ptrs) {
-      if (in_array($ptr, $ptrs)) {
-        $map[]  = $pid;
-        $hits[] = $ptr;
-      }
+    $obj = islandora_object_load($pid);
+    $cmodel = $obj->models[0];
+    if ($cmodel == "islandora:pageCModel") {
+      $ptr = find_pointer_for_page($obj);
+    } else {
+      $ptr = find_pointer_for_normal_obj($obj);
+    }
+    if ($ptrs && in_array($ptr, $ptrs)) {
+      $map[] = $pid;
+      $hits[] = $ptr;
     }
     else {
       $map[] = sprintf("%s => %s", $ptr, $pid);
@@ -413,6 +411,24 @@ function drush_islandora_utils_get_cdm_pointers_for_collection() {
   else {
     output_result($map);
   }
+}
+
+function find_pointer_for_page($obj) {
+  $seq_array = $obj->relationships->get("http://islandora.ca/ontology/relsext#", "isSequenceNumber");
+  $seq_num = $seq_array[0]['object']['value'];
+  $book_array = $obj->relationships->get("http://islandora.ca/ontology/relsext#", "isPageOf");
+  $book_pid = $book_array[0]['object']['value'];
+  $book_obj = islandora_object_load($book_pid);
+  $book_pointer = find_pointer_for_normal_obj($book_obj);
+  $ptr = "$book_pointer PAGE $seq_num";
+  return $ptr;
+}
+
+function find_pointer_for_normal_obj($obj) {
+  $mods = $obj->getDatastream('MODS')->content;
+  $xml = simplexml_load_string($mods);
+  $ptr = $xml->extension->CONTENTdmData->pointer;
+  return $ptr;
 }
 
 /**
