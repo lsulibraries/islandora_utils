@@ -170,7 +170,7 @@ function islandora_utils_drush_command() {
     ),
   );
   $items['islandora-utils-set-state'] = array(
-    'description' => dt('Set the fedora object state for a PID or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
+    'description' => dt('Set the fedora object state for a pidlist or for an entire namespace. OK to specify both options (pid/namespace), at least one of them is required.'),
     'examples' => array('drush islandora-utils-set-state-namespace --namespace=my --pid=my:pid'),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     'drupal dependencies' => array(
@@ -181,8 +181,8 @@ function islandora_utils_drush_command() {
         'description' => dt('namespace prefix to look for.'),
         'required' => FALSE,
       ),
-      'pid' => array(
-        'description' => dt('PID to set state for.'),
+      'pidlist' => array(
+        'description' => dt('csv list of pids that contain pages (a series of newspaper issues etc).'),
         'required' => FALSE,
       ),
       'logfile' => array(
@@ -336,24 +336,29 @@ EOL;
 }
 
 function drush_islandora_utils_set_state($state) {
-  $namespace = drush_get_option('namespace');
-  $pid = drush_get_option('pid');
-  if(!$namespace && !$pid) {
+  $namespace = drush_get_option('namespace', FALSE);
+  $pidlist = drush_get_option('pidlist', FALSE);
+  if(!$namespace && !$pidlist) {
     drush_log("One of 'namespace' or 'pid' options is required. Exiting.", 'warning');
     return;
   }
   $log = drush_get_option('logfile', FALSE);
   $errors = array();
   $list = array();
-
-  if (isset($pid)){
-    $list = array_merge($list, array(array('pid' => array('value' => $pid))));
+  if ($namespace && $pidlist) {
+    throw new Exception("'pid' and 'pidlist' are mutually exclusive options.");
   }
-  if(isset($namespace)) {
-    $list = array_merge($list, get_namespace_members($namespace));
+  elseif (!$namespace && !$pidlist) {
+    throw new Exception('One of the options [pid,pidlist] is required.');
   }
-  foreach ($list as $data) {
-    $pid = $data['pid']['value'];
+  elseif (!$namespace) {
+    $pidlist = trim(file_get_contents($pidlist));
+    $list = explode(',', $pidlist);
+  }
+  else{
+    $list = [$namespace];
+  }
+  foreach ($list as $pid) {
     $object = islandora_object_load($pid);
     if(!$object) {
       drush_log("No object found: $pid.", 'warning');
